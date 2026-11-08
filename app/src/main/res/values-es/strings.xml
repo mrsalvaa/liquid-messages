@@ -192,4 +192,15 @@
     <string name="swipe_right">Deslizar a la derecha</string>
     <string name="swipe_left">Deslizar a la izquierda</string>
     <string name="swipe_hint">Borrar manda a la papelera. Borrar y marcar como leído necesitan que Mensajes sea la app de SMS predeterminada.</string>
+    <string name="selection_exit">Salir de la selección</string>
+    <string name="select_all">Seleccionar todo</string>
+    <plurals name="selected_count">
+        <item quantity="one">%d seleccionada</item>
+        <item quantity="many">%d seleccionadas</item>
+        <item quantity="other">%d seleccionadas</item>
+    </plurals>
+    <string name="mark_all_read">Marcar todo como leído</string>
+    <string name="bar_read">Leídas</string>
+    <string name="more">Más</string>
+    <string name="delete_conversations_title">¿Borrar %1$d conversaciones?</string>
 </resources>

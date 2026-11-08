@@ -187,6 +187,7 @@ private fun MessagesUi(animated: Boolean) {
     var prompt by remember { mutableStateOf<PromptSpec?>(null) }
     var dialog by remember { mutableStateOf<DialogSpec?>(null) }
     var toast by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    var selection by remember { mutableStateOf<dev.liquidmessages.ui.screens.SelectionBottom?>(null) }
     val reduced = LocalReducedMotion.current
     val tick by Repo.permissionTick.collectAsStateWithLifecycle()
     val conflict by Repo.countryConflict.collectAsStateWithLifecycle()
@@ -238,6 +239,7 @@ private fun MessagesUi(animated: Boolean) {
         LocalPrompt provides { prompt = it },
         LocalDialog provides { dialog = it },
         LocalToast provides { toast = it to System.nanoTime() },
+        dev.liquidmessages.ui.screens.LocalSelectionBottom provides { selection = it },
     ) {
         // Dos chips de países distintos: no se adivina el país de los números sin prefijo.
         LaunchedEffect(conflict) {
@@ -255,8 +257,23 @@ private fun MessagesUi(animated: Boolean) {
         GlassRoot(
             animated = animated,
             floating = {
+                // Selección múltiple: arriba la cantidad, abajo las acciones (como en Contacts y Recorder).
+                var lastSelection by remember { mutableStateOf(selection) }
+                if (selection != null) lastSelection = selection
                 AnimatedVisibility(
-                    canRead && stack.isEmpty(),
+                    selection != null && stack.isEmpty(),
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    enter = fadeIn() + if (reduced) fadeIn() else androidx.compose.animation.slideInVertically { it / 2 },
+                    exit = fadeOut() + if (reduced) fadeOut() else androidx.compose.animation.slideOutVertically { it / 2 },
+                ) { lastSelection?.let { dev.liquidmessages.ui.screens.SelectionActions(it, flat = false) } }
+                AnimatedVisibility(
+                    selection != null && stack.isEmpty(),
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    enter = fadeIn() + if (reduced) fadeIn() else androidx.compose.animation.slideInVertically { -it / 2 },
+                    exit = fadeOut() + if (reduced) fadeOut() else androidx.compose.animation.slideOutVertically { -it / 2 },
+                ) { lastSelection?.let { dev.liquidmessages.ui.screens.SelectionTop(it, flat = false, insets.calculateTopPadding()) } }
+                AnimatedVisibility(
+                    canRead && stack.isEmpty() && selection == null,
                     modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp),
                     enter = fadeIn() + if (reduced) fadeIn() else scaleIn(initialScale = 0.8f),
                     exit = fadeOut() + if (reduced) fadeOut() else scaleOut(targetScale = 0.8f),

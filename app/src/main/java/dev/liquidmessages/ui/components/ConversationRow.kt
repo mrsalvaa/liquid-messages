@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,6 +124,8 @@ fun ConversationRow(
     shown: Message = c.last,
     /** Lista compacta: fila más baja, avatar más chico y una sola línea de vista previa. */
     compact: Boolean = false,
+    /** null = la lista no está seleccionando. */
+    selected: Boolean? = null,
 ) {
     val p = LocalGlass.current
     val unread = c.unread > 0
@@ -135,6 +139,7 @@ fun ConversationRow(
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(remember { MutableInteractionSource() }, null, role = Role.Button, onLongClick = onLongClick, onClick = onClick)
             .semantics(mergeDescendants = true) {
+                if (selected != null) this.selected = selected
                 contentDescription = listOfNotNull(
                     who.title,
                     if (c.prefs.pinned) str(R.string.pinned_cd) else null,
@@ -147,7 +152,14 @@ fun ConversationRow(
             .padding(horizontal = 8.dp, vertical = if (compact) 4.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ContactAvatar(who.title, size = if (compact) 38.dp else 48.dp, photoUri = who.photoUri)
+        val avatarSize = if (compact) 38.dp else 48.dp
+        if (selected == true) {
+            Box(Modifier.size(avatarSize).clip(CircleShape).background(p.accentFg), contentAlignment = Alignment.Center) {
+                Icon(styled(Icons.Rounded.Check), null, Modifier.size(avatarSize * 0.55f), tint = readableOn(p.accentFg))
+            }
+        } else {
+            ContactAvatar(who.title, size = avatarSize, photoUri = who.photoUri)
+        }
         Spacer(Modifier.width(if (compact) 12.dp else 14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

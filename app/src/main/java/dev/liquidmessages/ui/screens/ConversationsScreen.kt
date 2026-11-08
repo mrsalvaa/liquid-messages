@@ -2,6 +2,7 @@
 package dev.liquidmessages.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.DoneAll
 import dev.liquidmessages.ui.glass.LocalDialog
 import dev.liquidmessages.ui.glass.GlassCard
@@ -96,6 +97,7 @@ fun ConversationsScreen(
     val numbers by Repo.numbers.collectAsStateWithLifecycle()
     val settings by Stores.settings.state.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
+    var selected by rememberSaveable { mutableStateOf(setOf<Long>()) }
     val sheet = LocalActionSheet.current
     val dialog = LocalDialog.current
     val toast = LocalToast.current
@@ -208,6 +210,14 @@ fun ConversationsScreen(
         sheet(SheetSpec(r.who.title, actions + more))
     }
 
+    val list = rows
+    // Lo que ya no está en la lista (borrado, archivado) sale de la selección.
+    androidx.compose.runtime.LaunchedEffect(list) {
+        val ids = list.orEmpty().map { it.c.threadId }.toSet()
+        if (selected.any { it !in ids }) selected = selected intersect ids
+    }
+    ListSelection(selected, list.orEmpty(), isDefault, onChange = { selected = it }, menu = ::menu)
+
     val state = rememberLazyListState()
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -225,6 +235,12 @@ fun ConversationsScreen(
             } else {
                 ScreenTitle(str(R.string.conversations), Modifier.padding(horizontal = 4.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (isDefault && list.orEmpty().any { it.c.unread > 0 }) {
+                            GlassIconButton(Icons.Rounded.DoneAll, str(R.string.mark_all_read), {
+                                val threads = list.orEmpty().filter { it.c.unread > 0 }.map { it.c.threadId }
+                                Repo.io { threads.forEach { Repo.store.markRead(it) } }
+                            })
+                        }
                         GlassIconButton(Icons.Rounded.Archive, str(R.string.archived), onArchived)
                         GlassIconButton(Icons.Rounded.Settings, str(R.string.settings), onSettings)
                     }
@@ -263,7 +279,6 @@ fun ConversationsScreen(
                 Text(str(R.string.fake_notice), Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 13.sp, color = p.dangerText)
             }
         }
-        val list = rows
         if (list != null && list.isEmpty() && inbox.loaded) {
             item(key = "empty") {
                 when {
@@ -275,8 +290,8 @@ fun ConversationsScreen(
         }
         items(list.orEmpty(), key = { it.c.threadId }, contentType = { "row" }) { r ->
             SwipeRow(
-                right = SwipeAction.of(settings.swipeRight).takeIf { it.available(isDefault) },
-                left = SwipeAction.of(settings.swipeLeft).takeIf { it.available(isDefault) },
+                right = SwipeAction.of(settings.swipeRight).takeIf { it.available(isDefault) && selected.isEmpty() },
+                left = SwipeAction.of(settings.swipeLeft).takeIf { it.available(isDefault) && selected.isEmpty() },
                 pinned = r.c.prefs.pinned,
                 archivedView = archived,
                 onSwipe = { action ->
@@ -292,7 +307,17 @@ fun ConversationsScreen(
                     }
                 },
             ) {
-                ConversationRow(r.c, r.who, onClick = { onOpen(r.c) }, onLongClick = { menu(r) }, shown = r.shown, compact = settings.compactList)
+                val id = r.c.threadId
+                ConversationRow(
+                    r.c,
+                    r.who,
+                    // Seleccionando, tocar suma o saca; si no, abre. Mantener apretado empieza a seleccionar.
+                    onClick = { if (selected.isEmpty()) onOpen(r.c) else selected = if (id in selected) selected - id else selected + id },
+                    onLongClick = { selected = selected + id },
+                    shown = r.shown,
+                    compact = settings.compactList,
+                    selected = if (selected.isEmpty()) null else id in selected,
+                )
             }
         }
     }
@@ -364,4 +389,62 @@ private fun SwipeRow(
             }
         },
     ) { content() }
+}
+
+/**
+ * Barras de la selección múltiple de conversaciones: leídas, fijar, archivar, silenciar y borrar;
+ * con una sola, "Más" abre el menú de esa conversación. Atrás sale de la selección.
+ */
+@Composable
+private fun ListSelection(selected: Set<Long>, rows: List<ListRow>, isDefault: Boolean, onChange: (Set<Long>) -> Unit, menu: (ListRow) -> Unit) {
+    val setBottom = LocalSelectionBottom.current
+    val dialog = LocalDialog.current
+    val toast = LocalToast.current
+    val active = selected.isNotEmpty()
+    androidx.activity.compose.BackHandler(enabled = active) { onChange(emptySet()) }
+    val chosen = rows.filter { it.c.threadId in selected }
+    fun keys() = chosen.map { it.c.key }.toSet()
+    fun flip(all: Boolean, get: (AppSettings) -> Set<String>, put: AppSettings.(Set<String>) -> AppSettings) {
+        val k = keys()
+        Stores.settings.update { s -> s.put(if (all) get(s) - k else get(s) + k) }
+        onChange(emptySet())
+    }
+    val allPinned = chosen.isNotEmpty() && chosen.all { it.c.prefs.pinned }
+    val allArchived = chosen.isNotEmpty() && chosen.all { it.c.prefs.archived }
+    val allMuted = chosen.isNotEmpty() && chosen.all { it.c.prefs.muted }
+    val items = androidx.compose.runtime.rememberUpdatedState(
+        buildList {
+            if (isDefault) add(BarItem(Icons.Rounded.DoneAll, str(R.string.bar_read), str(R.string.notif_mark_read), active) {
+                val threads = chosen.map { it.c.threadId }
+                Repo.io { threads.forEach { Repo.store.markRead(it) } }
+                onChange(emptySet())
+            })
+            add(BarItem(Icons.Rounded.PushPin, str(if (allPinned) R.string.unpin else R.string.pin), str(if (allPinned) R.string.unpin else R.string.pin), active) { flip(allPinned, { it.pinned }) { copy(pinned = it) } })
+            add(BarItem(if (allArchived) Icons.Rounded.Unarchive else Icons.Rounded.Archive, str(if (allArchived) R.string.unarchive else R.string.archive), str(if (allArchived) R.string.unarchive else R.string.archive), active) { flip(allArchived, { it.archived }) { copy(archived = it) } })
+            add(BarItem(if (allMuted) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff, str(if (allMuted) R.string.unmute else R.string.mute), str(if (allMuted) R.string.unmute else R.string.mute), active) { flip(allMuted, { it.muted }) { copy(muted = it) } })
+            if (isDefault) add(BarItem(Icons.Rounded.DeleteOutline, str(R.string.delete), str(R.string.delete), active) {
+                dialog(DialogSpec(if (chosen.size == 1) str(R.string.delete_conversation_title) else str(R.string.delete_conversations_title, chosen.size)) { dismiss ->
+                    Text(str(R.string.to_trash_text), color = LocalGlass.current.contentSecondary, fontSize = 15.sp)
+                    Spacer(Modifier.height(16.dp))
+                    DangerButton(str(R.string.delete), {
+                        dismiss()
+                        val threads = chosen.associate { it.c.threadId to it.c.addresses }
+                        Repo.io { Repo.trash.deleteThreads(threads) }
+                        toast(str(R.string.moved_to_trash))
+                        onChange(emptySet())
+                    }, Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(8.dp))
+                    GlassButton(str(R.string.cancel), dismiss, Modifier.fillMaxWidth())
+                })
+            })
+            chosen.singleOrNull()?.let { one -> add(BarItem(Icons.Rounded.MoreHoriz, str(R.string.more), str(R.string.more), active) { menu(one) }) }
+        },
+    )
+    val top = androidx.compose.runtime.rememberUpdatedState(
+        SelectionTopState(selected.size, selected.size < rows.size, { onChange(rows.map { it.c.threadId }.toSet()) }, { onChange(emptySet()) }),
+    )
+    androidx.compose.runtime.DisposableEffect(active) {
+        if (active) setBottom(SelectionBottom(top, items))
+        onDispose { setBottom(null) }
+    }
 }
