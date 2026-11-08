@@ -2,6 +2,7 @@
 package dev.liquidmessages.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.DoneAll
 import dev.liquidmessages.ui.glass.LocalDialog
@@ -163,6 +164,9 @@ fun ConversationsScreen(
             })
             add(SheetAction(str(if (c.prefs.muted) R.string.unmute else R.string.mute), if (c.prefs.muted) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff) {
                 toggle({ it.muted }, c.key) { copy(muted = it) }
+            })
+            add(SheetAction(str(R.string.conversation_sound), Icons.Rounded.MusicNote) {
+                dev.liquidmessages.notify.Notifier.openConversationSound(context, c.key, r.who.title)
             })
             if (single != null && SenderKind.of(single) != SenderKind.ALPHANUMERIC) {
                 add(SheetAction(str(R.string.call), Icons.Rounded.Call) { Actions.dial(context, single) })

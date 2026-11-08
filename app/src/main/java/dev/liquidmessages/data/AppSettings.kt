@@ -67,6 +67,13 @@ data class AppSettings(
     val swipeRight: Int = 1,
     val swipeLeft: Int = 0,
 
+    /** Notificaciones: 0 = quién y el texto, 1 = solo quién, 2 = nada ("Mensaje nuevo"). */
+    val notifPreview: Int = 0,
+    /** Pedir informe de entrega al enviar SMS (algunos operadores lo cobran). */
+    val deliveryReports: Boolean = false,
+    /** Conversaciones con su propio canal de notificación (sonido o vibración distintos), por clave. */
+    val customSound: Set<String> = emptySet(),
+
     /** Respuestas rápidas: frases que se insertan en el campo de escribir con un toque. */
     val quickReplies: List<String> = listOf("Ahora no puedo, te escribo después.", "Llego en 10 minutos.", "Dale, gracias.", "¿Te puedo llamar?"),
 

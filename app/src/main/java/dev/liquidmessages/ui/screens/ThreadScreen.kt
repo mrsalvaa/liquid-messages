@@ -445,6 +445,7 @@ private fun Bubble(
         when (m.box) {
             MessageBox.FAILED -> str(R.string.failed)
             MessageBox.OUTBOX, MessageBox.QUEUED -> str(R.string.sending)
+            MessageBox.SENT -> if (m.delivered) str(R.string.delivered) else null
             else -> null
         },
     ).joinToString(" · ")

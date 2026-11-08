@@ -97,6 +97,14 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             }
         }
 
+        SectionLabel(str(R.string.notifications))
+        GlassCard {
+            Text(str(R.string.notif_preview), fontSize = 16.sp)
+            ChipRow(listOf(0, 1, 2), s.notifPreview, { str(listOf(R.string.preview_all, R.string.preview_sender, R.string.preview_none)[it]) }) { v -> edit { it.copy(notifPreview = v) } }
+            Text(str(R.string.notif_preview_hint), fontSize = 13.sp, color = p.contentSecondary)
+            SwitchRow(str(R.string.delivery_reports), s.deliveryReports, { v -> edit { it.copy(deliveryReports = v) } }, Modifier.padding(top = 8.dp), subtitle = str(R.string.delivery_reports_hint))
+        }
+
         SectionLabel(str(R.string.security))
         GlassCard {
             val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity

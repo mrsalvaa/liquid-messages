@@ -137,11 +137,13 @@ object Notifier {
             nm.cancel(threadId.toInt())
             return
         }
-        // Con la app bloqueada: ni quién ni qué, y sin responder (saltearía el bloqueo).
-        if (Stores.settings.value.appLock) {
+        val settings = Stores.settings.value
+        val channel = if (key in settings.customSound) conversationChannel(context, key, null) else CHANNEL_MESSAGES
+        // Con la app bloqueada o la vista previa en "nada": ni quién ni qué, y sin responder.
+        if (settings.appLock || settings.notifPreview == 2) {
             nm.notify(
                 threadId.toInt(),
-                Notification.Builder(context, CHANNEL_MESSAGES)
+                Notification.Builder(context, channel)
                     .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle(context.getString(R.string.notif_new_public))
                     .setCategory(Notification.CATEGORY_MESSAGE)
@@ -158,12 +160,14 @@ object Notifier {
         val people = HashMap<String, Person>()
         for (m in messages) {
             val p = people.getOrPut(m.address) { person(context, m.address, numbers) }
-            style.addMessage(Notification.MessagingStyle.Message(m.text, m.date, p))
+            // Vista previa "solo quién": se ve quién escribió, no qué.
+            val text = if (settings.notifPreview == 1) context.getString(R.string.notif_new_public) else m.text
+            style.addMessage(Notification.MessagingStyle.Message(text, m.date, p))
         }
         if (group) style.conversationTitle = participants.joinToString(", ") { a -> (people[a] ?: person(context, a, numbers)).name?.toString() ?: a }
         val single = participants.singleOrNull()
-        val code = messages.lastOrNull()?.text?.let(Codes::find)
-        val builder = Notification.Builder(context, CHANNEL_MESSAGES)
+        val code = if (settings.notifPreview == 1) null else messages.lastOrNull()?.text?.let(Codes::find)
+        val builder = Notification.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
             .setStyle(style)
             .setCategory(Notification.CATEGORY_MESSAGE)
@@ -199,6 +203,36 @@ object Notifier {
             )
         }
         nm.notify(threadId.toInt(), builder.build())
+    }
+
+    /**
+     * Canal propio de una conversación, para darle otro sonido o vibración en los ajustes del
+     * sistema. El id no lleva el número: es un resumen de la clave.
+     */
+    fun conversationChannel(context: Context, key: String, title: String?): String {
+        val id = "conv_" + Integer.toHexString(key.hashCode())
+        val nm = context.getSystemService(NotificationManager::class.java)
+        if (nm != null && nm.getNotificationChannel(id) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(id, title ?: context.getString(R.string.channel_messages), NotificationManager.IMPORTANCE_HIGH).apply {
+                    lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+                    group = null
+                },
+            )
+        }
+        return id
+    }
+
+    /** Abre los ajustes del sistema del canal propio de una conversación (y lo crea si hace falta). */
+    fun openConversationSound(context: Context, key: String, title: String) {
+        val id = conversationChannel(context, key, title)
+        Stores.settings.update { it.copy(customSound = it.customSound + key) }
+        context.startActivity(
+            Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, id)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 
     fun cancel(context: Context, threadId: Long) {

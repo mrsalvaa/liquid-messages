@@ -219,4 +219,14 @@
     <string name="send_now">Enviar ahora</string>
     <string name="cancel_scheduled">Cancelar y editar</string>
     <string name="scheduled_not_sent_title">No se envió un mensaje programado</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="notif_preview">Qué muestran las notificaciones</string>
+    <string name="preview_all">Quién y el texto</string>
+    <string name="preview_sender">Solo quién</string>
+    <string name="preview_none">Nada</string>
+    <string name="notif_preview_hint">En la pantalla bloqueada siempre dicen solo \"Mensaje nuevo\".</string>
+    <string name="delivery_reports">Informe de entrega</string>
+    <string name="delivery_reports_hint">Muestra \"Entregado\" debajo de cada SMS cuando llega. Algunos operadores lo cobran.</string>
+    <string name="delivered">Entregado</string>
+    <string name="conversation_sound">Sonido de esta conversación</string>
 </resources>

@@ -213,4 +213,14 @@
     <string name="send_now">Send now</string>
     <string name="cancel_scheduled">Cancel and edit</string>
     <string name="scheduled_not_sent_title">A scheduled message wasn\'t sent</string>
+    <string name="notifications">Notifications</string>
+    <string name="notif_preview">What notifications show</string>
+    <string name="preview_all">Who and the text</string>
+    <string name="preview_sender">Only who</string>
+    <string name="preview_none">Nothing</string>
+    <string name="notif_preview_hint">On the lock screen they always say only \"New message\".</string>
+    <string name="delivery_reports">Delivery reports</string>
+    <string name="delivery_reports_hint">Shows \"Delivered\" under each SMS when it arrives. Some carriers charge for it.</string>
+    <string name="delivered">Delivered</string>
+    <string name="conversation_sound">Sound for this conversation</string>
 </resources>

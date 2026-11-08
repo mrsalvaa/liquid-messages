@@ -35,7 +35,7 @@ class SystemSms(context: Context) {
             Telephony.Sms.CONTENT_URI,
             arrayOf(
                 Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY,
-                Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.READ, Telephony.Sms.SUBSCRIPTION_ID,
+                Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.READ, Telephony.Sms.SUBSCRIPTION_ID, Telephony.Sms.STATUS,
             ),
             null,
             null,
@@ -53,6 +53,7 @@ class SystemSms(context: Context) {
                             box = Box.of(c.getInt(5)),
                             read = c.getInt(6) != 0,
                             subscriptionId = c.intOrNull(7)?.takeIf { it >= 0 },
+                            delivered = c.intOrNull(8) == Telephony.Sms.STATUS_COMPLETE,
                         ),
                     )
                 }

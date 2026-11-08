@@ -62,6 +62,11 @@ class SmsStore(context: Context) {
         )
     }
 
+    /** Estado del informe de entrega (Telephony.Sms.STATUS_*). */
+    fun setStatus(uri: Uri, status: Int) {
+        resolver.update(uri, ContentValues().apply { put(Telephony.Sms.STATUS, status) }, null, null)
+    }
+
     /** Marca leída y vista toda una conversación, SMS y MMS. Devuelve cuántos cambió. */
     fun markRead(threadId: Long): Int {
         val values = ContentValues().apply {

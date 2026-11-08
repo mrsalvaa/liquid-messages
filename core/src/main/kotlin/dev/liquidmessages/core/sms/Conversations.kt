@@ -38,6 +38,8 @@ data class Message(
      * descarga falla, el aviso queda guardado y se puede reintentar: nunca se pierde.
      */
     val pending: Boolean = false,
+    /** SMS enviado con informe de entrega que ya llegó a destino. */
+    val delivered: Boolean = false,
 ) {
     /** Lo que se puede contar de un mensaje en una línea, sin el texto: "Foto", "2 adjuntos". */
     val hasContent: Boolean get() = body.isNotBlank() || attachments.isNotEmpty() || subject != null

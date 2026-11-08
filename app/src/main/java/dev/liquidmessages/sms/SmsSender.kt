@@ -35,6 +35,7 @@ object DefaultSms {
  */
 object SmsSender {
     const val ACTION_SENT = "dev.liquidmessages.SMS_SENT"
+    const val ACTION_DELIVERED = "dev.liquidmessages.SMS_DELIVERED"
     private const val EXTRA_PART = "part"
     private const val EXTRA_PARTS = "parts"
 
@@ -54,9 +55,24 @@ object SmsSender {
             val code = ((ContentUris.parseId(uri) * 31 + i) and 0x7FFFFFFF).toInt()
             sent += PendingIntent.getBroadcast(context, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
+        // Informe de entrega, si está activado: con la última parte alcanza.
+        val delivered = if (!dev.liquidmessages.data.Stores.settings.value.deliveryReports) null else ArrayList<PendingIntent?>(parts.size).apply {
+            for (i in parts.indices) {
+                add(
+                    if (i < parts.size - 1) null
+                    else PendingIntent.getBroadcast(
+                        context,
+                        ((ContentUris.parseId(uri) * 31 + 1000 + i) and 0x7FFFFFFF).toInt(),
+                        Intent(context, SmsStatusReceiver::class.java).setAction(ACTION_DELIVERED).setData(uri),
+                        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    ),
+                )
+            }
+            store.setStatus(uri, android.provider.Telephony.Sms.STATUS_PENDING)
+        }
         try {
-            if (parts.size == 1) manager.sendTextMessage(address, null, body, sent[0], null)
-            else manager.sendMultipartTextMessage(address, null, parts, sent, null)
+            if (parts.size == 1) manager.sendTextMessage(address, null, body, sent[0], delivered?.get(0))
+            else manager.sendMultipartTextMessage(address, null, parts, sent, delivered)
         } catch (e: RuntimeException) {
             // Dirección inválida, sin servicio de SMS, etc.: queda como no enviado, a la vista.
             store.setBox(uri, Box.FAILED)
@@ -91,6 +107,28 @@ object SmsSender {
 class SmsStatusReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val uri = intent.data ?: return
+        if (intent.action == SmsSender.ACTION_DELIVERED) {
+            // El informe llega como PDU: su estado dice si se entregó.
+            val pdu = intent.getByteArrayExtra("pdu")
+            val format = intent.getStringExtra("format")
+            val status = pdu?.let { runCatching { android.telephony.SmsMessage.createFromPdu(it, format).status }.getOrNull() }
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    // 0 = entregado; 0x20..0x3F = el centro lo sigue intentando; lo demás, falló.
+                    val value = when {
+                        status == null -> android.provider.Telephony.Sms.STATUS_COMPLETE
+                        status == 0 -> android.provider.Telephony.Sms.STATUS_COMPLETE
+                        status in 0x20..0x3F -> android.provider.Telephony.Sms.STATUS_PENDING
+                        else -> android.provider.Telephony.Sms.STATUS_FAILED
+                    }
+                    SmsStore(context).setStatus(uri, value)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
         val (part, parts) = SmsSender.partOf(intent)
         val ok = resultCode == Activity.RESULT_OK
         val error = intent.getIntExtra("errorCode", resultCode)
