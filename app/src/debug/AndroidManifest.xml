@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+    Solo debug y profile. El receptor atiende a la herramienta de pruebas desde adb; está protegido
+    con DUMP, que tiene el shell de adb y ninguna app instalada por el usuario. No suma permisos:
+    los datos de prueba viven en memoria.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".DevReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="dev.liquidmessages.DEV_FAKE" />
+                <action android:name="dev.liquidmessages.DEV_CLEAR" />
+                <action android:name="dev.liquidmessages.DEV_STYLE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

@@ -2,6 +2,7 @@
 package dev.liquidmessages
 
 import android.app.Application
+import dev.liquidmessages.data.Repo
 import dev.liquidmessages.data.Stores
 import dev.liquidmessages.util.Strings
 
@@ -10,5 +11,6 @@ class MessagesApp : Application() {
         super.onCreate()
         Strings.app = this
         Stores.init(this)
+        Repo.init(this)
     }
 }

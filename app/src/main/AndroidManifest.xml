@@ -3,9 +3,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Leer los SMS guardados en el celular: sin esto no hay conversaciones para mostrar. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+
+    <!-- Poner nombre y foto a los números y elegir a quién escribir. Solo lectura. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
     <!--
-        Etapa 0: sin ningún permiso. Los de SMS, contactos y chips se suman en las etapas 1 y 2,
-        cada uno con su motivo al lado.
+        Qué chips hay, su nombre, color y si tienen servicio, para elegir con cuál enviar. No da el
+        número de la línea (ese es READ_PHONE_NUMBERS, que se quita abajo).
+    -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <!--
+        Enviar y recibir llegan en la etapa 2, con el rol de app de SMS predeterminada.
 
         Nunca: internet (los MMS los baja y los manda el sistema), ubicación ni el número de la
         línea. Se quitan también si alguna librería los pide.

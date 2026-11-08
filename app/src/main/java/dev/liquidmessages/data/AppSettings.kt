@@ -41,6 +41,17 @@ data class AppSettings(
     val simPolicy: Int = 0,
     /** Ranura del chip principal: 0 = SIM 1, 1 = SIM 2. Solo vale en esta app. */
     val primarySimSlot: Int = 0,
+    /**
+     * Cambiar á, í, ó, ú y las comillas tipográficas al enviar, para que el mensaje entre en 160
+     * caracteres por parte en vez de 70 (ver SmsLength.simplify). Apagado por defecto.
+     */
+    val simplifyAccents: Boolean = false,
+
+    // Conversaciones, por su clave de participantes (Conversations.key), no por thread_id.
+    val pinned: Set<String> = emptySet(),
+    val archived: Set<String> = emptySet(),
+    /** Sin notificación (desde la etapa 2). */
+    val muted: Set<String> = emptySet(),
 ) {
     val glassStyle: GlassStyle get() = GlassStyle(themeMode, backgroundMode, colorSet, accentColor, uiStyle, solidAccent)
 }

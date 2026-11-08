@@ -76,7 +76,10 @@ android {
         buildConfig = true
     }
 
-    // Los textos de la build de prueba ("Mensajes (prueba)") valen también para profile.
+    // Herramientas que solo existen en debug y profile (mensajes inventados en memoria, por
+    // adb): la release no las compila.
+    sourceSets["profile"].java.srcDir("src/debug/java")
+    sourceSets["profile"].manifest.srcFile("src/debug/AndroidManifest.xml")
     sourceSets["profile"].res.srcDir("src/debug/res")
 
     lint {

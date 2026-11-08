@@ -38,3 +38,41 @@ Qué reutiliza esta app, qué escribió para sí y por qué. Se completa etapa p
 | `text/Links.kt` | Enlaces (solo con `http`, `https` o `www.`), emails y teléfonos para tocarlos. `host` da el dominio real para confirmarlo antes de abrir (`https://banco.com@estafa.example` es `estafa.example`). |
 
 Los números de los tests siguen las reglas de `DESIGN.md` de Liquid Phone ("Números de los tests").
+
+## Etapa 1: interfaz y lectura
+
+- **Pantallas:** lista de conversaciones (sin pestañas: buscador, archivadas y ajustes arriba, botón flotante de mensaje nuevo), conversación, mensaje nuevo, archivadas, ajustes y una pantalla que explica los permisos antes de pedirlos. Estructura de `MainActivity` como la de Phone: una pila de pantallas encima de la lista.
+- **Copiado de Contacts `858940b`:** `ui/components/ContactComponents.kt` (avatar, fila, búsqueda, botón rojo), `ui/screens/Common.kt` y `ui/screens/AppearanceCard.kt`. **De Phone `2c2bb1a`:** `sim/SystemSims.kt` sin las cuentas de llamada, la parte de lectura de `contacts/SystemContacts.kt` y `FakeNumbers.kt`.
+- **Permisos:** `READ_SMS`, `READ_CONTACTS` y `READ_PHONE_STATE`, con su motivo en el manifest. Ningún otro.
+- **Lectura:** `sms/SystemSms.kt` lee los SMS del proveedor y, de los MMS, solo cuándo llegaron y a qué conversación: se muestran como "MMS, no soportado todavía". Los participantes salen de `canonical-addresses`. Se vuelve a leer con cada cambio del proveedor.
+- **Fijar, archivar y silenciar** se guardan en `settings.json` por la clave de participantes.
+- **Enviar:** en esta etapa la app no es la de SMS predeterminada, así que el mensaje pasa escrito y sin enviar a la app de SMS actual (`ACTION_SENDTO`). La elección de chip ya pasa por `SmsDecider`.
+- **Enlaces:** se marcan web, email y teléfono. Un enlace web pide confirmación mostrando el dominio real; un teléfono solo queda escrito en el teclado.
+- **Códigos:** "Copiar código" en el menú del mensaje, marcado como sensible para que el sistema no lo muestre en la vista previa del portapapeles (Android 13+).
+- **Teclado:** el margen general excluye el teclado (`safeDrawing.exclude(ime)`); cada pantalla que escribe suma `imePadding` una vez. Antes se sumaba dos veces y la lista desaparecía.
+
+### Herramienta de prueba
+
+Solo debug y profile, protegida con `DUMP` (solo el shell de adb):
+
+```bash
+adb shell am broadcast -f 0x20 -a dev.liquidmessages.DEV_FAKE -p dev.liquidmessages.debug --ei count 500
+adb shell am broadcast -f 0x20 -a dev.liquidmessages.DEV_CLEAR -p dev.liquidmessages.debug
+adb shell am broadcast -f 0x20 -a dev.liquidmessages.DEV_STYLE -p dev.liquidmessages.debug --ei background 2 --ei ui 0 --ei theme 2
+```
+
+Los datos de prueba viven **en memoria**: nunca se escriben en el proveedor de SMS ni en la agenda. Números de los rangos reservados (`FakeNumbers`), nombres con "(prueba)", dominios `example.*`, y la lista avisa en rojo que nada es real.
+
+### Qué se probó (emulador `liquid35`)
+
+| Prueba | Resultado |
+|---|---|
+| Dos SMS simulados con `adb emu sms send` desde `+1 202 555 01XX` | Aparecen solos, con no leídos |
+| Copiar código | El portapapeles lo muestra como `••••••` |
+| Tocar un enlace | Pide confirmación con `example.com` |
+| Enviar | Se abre la app de SMS del emulador con el texto escrito |
+| 500 conversaciones y 2417 mensajes en memoria | Lista, conversación larga con separadores por día, búsqueda sin tildes |
+| Fijar y archivar | La fijada arriba con alfiler; la archivada en Archivadas |
+| Tema oscuro, Liquid y Sólido | Se leen bien |
+
+Al terminar se borraron los SMS simulados, se desinstaló la build y se apagó el emulador. **Sin probar:** dos chips (el emulador tiene uno) y la fluidez en el celu.
