@@ -163,4 +163,15 @@
         <item quantity="many">quedan %1$d días</item>
         <item quantity="other">quedan %1$d días</item>
     </plurals>
+    <string name="backup">Respaldo</string>
+    <string name="backup_export">Exportar mensajes</string>
+    <string name="backup_export_hint">Todos los SMS y MMS a un archivo XML (formato de SMS Backup &amp; Restore). Elegís dónde.</string>
+    <string name="backup_import">Importar un respaldo</string>
+    <string name="backup_import_hint">Desde un archivo XML de SMS Backup &amp; Restore. Lo que ya está en el celular no se duplica.</string>
+    <string name="backup_progress">%1$d mensajes…</string>
+    <string name="backup_exported">Se exportaron %1$d SMS y %2$d MMS.</string>
+    <string name="backup_imported">Se importaron %1$d SMS y %2$d MMS. %3$d ya estaban en el celular.</string>
+    <string name="backup_failed_some">%1$d no se pudieron importar.</string>
+    <string name="backup_error">No se pudo leer o escribir el archivo.</string>
+    <string name="ok">Listo</string>
 </resources>

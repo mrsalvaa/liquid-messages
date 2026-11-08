@@ -11,6 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxWidth
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -108,6 +111,9 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             GlassCard { SettingRow(str(R.string.blocked_numbers), onClick = onBlocked) }
         }
 
+        SectionLabel(str(R.string.backup))
+        BackupCard(isDefault)
+
         SectionLabel(str(R.string.trash))
         GlassCard { SettingRow(str(R.string.trash), subtitle = str(R.string.trash_hint), onClick = onTrash) }
 
@@ -115,5 +121,56 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
         GlassCard {
             Text(str(R.string.version, BuildConfig.VERSION_NAME), fontSize = 15.sp, color = p.contentSecondary)
         }
+    }
+}
+
+/**
+ * Exportar e importar en el formato de "SMS Backup & Restore". El archivo se elige con el selector
+ * del sistema (sin permiso de almacenamiento). Importar necesita ser la app predeterminada.
+ */
+@Composable
+private fun BackupCard(isDefault: Boolean) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val dialog = dev.liquidmessages.ui.glass.LocalDialog.current
+    val p = LocalGlass.current
+    var status by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var busy by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    fun run(work: (dev.liquidmessages.sms.Backup, (Int) -> Unit) -> dev.liquidmessages.sms.Backup.Result?, done: (dev.liquidmessages.sms.Backup.Result) -> String) {
+        busy = true
+        scope.launch {
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { work(dev.liquidmessages.sms.Backup(context)) { n -> scope.launch { status = str(R.string.backup_progress, n) } } }.getOrNull()
+            }
+            busy = false
+            status = null
+            val text = result?.let(done) ?: str(R.string.backup_error)
+            dialog(dev.liquidmessages.ui.glass.DialogSpec(str(R.string.backup)) { dismiss ->
+                Text(text, color = LocalGlass.current.content, fontSize = 15.sp)
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 16.dp))
+                dev.liquidmessages.ui.glass.GlassButton(str(R.string.ok), dismiss, Modifier.fillMaxWidth(), prominent = true)
+            })
+        }
+    }
+
+    val exportTo = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/xml")) { uri ->
+        if (uri != null) run({ b, progress -> context.contentResolver.openOutputStream(uri)?.use { b.export(it, progress) } }) { r -> str(R.string.backup_exported, r.sms, r.mms) }
+    }
+    val importFrom = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) run({ b, progress -> context.contentResolver.openInputStream(uri)?.use { b.import(it, progress) } }) { r ->
+            str(R.string.backup_imported, r.sms, r.mms, r.skipped) + if (r.failed > 0) " " + str(R.string.backup_failed_some, r.failed) else ""
+        }
+    }
+    GlassCard {
+        SettingRow(str(R.string.backup_export), subtitle = str(R.string.backup_export_hint), onClick = {
+            if (!busy) exportTo.launch("mensajes-" + java.time.LocalDate.now() + ".xml")
+        })
+        SettingRow(
+            str(R.string.backup_import),
+            subtitle = str(if (isDefault) R.string.backup_import_hint else R.string.needs_default),
+            onClick = { if (!busy && isDefault) importFrom.launch(arrayOf("text/xml", "application/xml", "*/*")) },
+        )
+        status?.let { Text(it, Modifier.padding(top = 8.dp), fontSize = 13.sp, color = p.contentSecondary) }
     }
 }

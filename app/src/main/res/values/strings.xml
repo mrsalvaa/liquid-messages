@@ -158,4 +158,15 @@
         <item quantity="one">%1$d day left</item>
         <item quantity="other">%1$d days left</item>
     </plurals>
+    <string name="backup">Backup</string>
+    <string name="backup_export">Export messages</string>
+    <string name="backup_export_hint">All SMS and MMS to an XML file (SMS Backup &amp; Restore format). You choose where.</string>
+    <string name="backup_import">Import a backup</string>
+    <string name="backup_import_hint">From an SMS Backup &amp; Restore XML file. What\'s already on the phone isn\'t duplicated.</string>
+    <string name="backup_progress">%1$d messages…</string>
+    <string name="backup_exported">Exported %1$d SMS and %2$d MMS.</string>
+    <string name="backup_imported">Imported %1$d SMS and %2$d MMS. %3$d were already on the phone.</string>
+    <string name="backup_failed_some">%1$d couldn\'t be imported.</string>
+    <string name="backup_error">The file couldn\'t be read or written.</string>
+    <string name="ok">OK</string>
 </resources>
