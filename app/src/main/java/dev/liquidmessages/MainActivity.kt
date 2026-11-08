@@ -93,6 +93,7 @@ sealed interface Overlay {
     /** Elegir a quién escribir; [text] e [image] vienen de compartir desde otra app. */
     data class New(val text: String = "", val image: android.net.Uri? = null) : Overlay
     data object Blocked : Overlay
+    data object Trash : Overlay
     data object Archived : Overlay
     data object Settings : Overlay
 }
@@ -311,7 +312,8 @@ private fun MessagesUi(animated: Boolean) {
                                 pop()
                                 push(Overlay.Thread(null, addresses, current.text, current.image))
                             }
-                            Overlay.Settings -> SettingsScreen(padding, ::pop, onBlocked = { push(Overlay.Blocked) })
+                            Overlay.Settings -> SettingsScreen(padding, ::pop, onBlocked = { push(Overlay.Blocked) }, onTrash = { push(Overlay.Trash) })
+                            Overlay.Trash -> dev.liquidmessages.ui.screens.TrashScreen(padding, ::pop)
                             Overlay.Blocked -> BlockedScreen(padding, ::pop)
                         }
                     }

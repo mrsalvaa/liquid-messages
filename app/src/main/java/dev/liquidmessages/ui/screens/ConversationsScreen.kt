@@ -191,11 +191,11 @@ fun ConversationsScreen(
                 add(SheetAction(str(R.string.delete), Icons.Rounded.DeleteOutline) {
                     dialog(
                         DialogSpec(str(R.string.delete_conversation_title)) { dismiss ->
-                            Text(str(R.string.delete_conversation_text) + " " + str(R.string.delete_cant_undo), color = LocalGlass.current.contentSecondary, fontSize = 15.sp)
+                            Text(str(R.string.to_trash_text), color = LocalGlass.current.contentSecondary, fontSize = 15.sp)
                             Spacer(Modifier.height(16.dp))
                             DangerButton(str(R.string.delete), {
                                 dismiss()
-                                Repo.io { Repo.store.deleteThreads(listOf(c.threadId)) }
+                                Repo.io { Repo.trash.deleteThreads(mapOf(c.threadId to c.addresses)) }
                             }, Modifier.fillMaxWidth())
                             Spacer(Modifier.height(8.dp))
                             GlassButton(str(R.string.cancel), dismiss, Modifier.fillMaxWidth())

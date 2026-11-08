@@ -226,7 +226,7 @@ fun ThreadScreen(
                     }
                     if (isDefault) {
                         add(SheetAction(str(R.string.delete), Icons.Rounded.DeleteOutline) {
-                            confirmDelete(str(R.string.delete_message_title), str(R.string.delete_cant_undo)) { Repo.io { Repo.store.delete(listOf(m.id)) } }
+                            confirmDelete(str(R.string.delete_message_title), str(R.string.to_trash_text)) { Repo.io { Repo.trash.deleteMessages(listOf(m.id), people) } }
                         })
                     }
                 },

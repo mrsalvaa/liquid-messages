@@ -30,7 +30,7 @@ import dev.liquidmessages.ui.glass.SettingRow
 import dev.liquidmessages.util.str
 
 @Composable
-fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> Unit) {
+fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> Unit, onTrash: () -> Unit) {
     val s by Stores.settings.state.collectAsStateWithLifecycle()
     val sims by Repo.sims.state.collectAsStateWithLifecycle()
     val isDefault by Repo.isDefault.collectAsStateWithLifecycle()
@@ -107,6 +107,9 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             SectionLabel(str(R.string.block))
             GlassCard { SettingRow(str(R.string.blocked_numbers), onClick = onBlocked) }
         }
+
+        SectionLabel(str(R.string.trash))
+        GlassCard { SettingRow(str(R.string.trash), subtitle = str(R.string.trash_hint), onClick = onTrash) }
 
         SectionLabel(str(R.string.about))
         GlassCard {

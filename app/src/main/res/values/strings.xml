@@ -138,4 +138,24 @@
     <string name="app_lock">Lock with fingerprint or PIN</string>
     <string name="app_lock_hint">Asks for the phone\'s unlock when opening the app or coming back after 30 seconds. Notifications then only say "New message", without replying.</string>
     <string name="app_lock_unavailable">Set a screen lock on the phone first.</string>
+    <string name="trash">Trash</string>
+    <string name="trash_hint">What you delete stays here for 30 days.</string>
+    <string name="trash_none">The trash is empty</string>
+    <string name="to_trash_text">It goes to the trash: you can get it back within 30 days.</string>
+    <string name="restore">Restore</string>
+    <string name="delete_forever">Delete forever</string>
+    <string name="trash_purge_title">Delete forever?</string>
+    <string name="trash_empty_title">Empty the trash</string>
+    <plurals name="restored_count">
+        <item quantity="one">%1$d message restored</item>
+        <item quantity="other">%1$d messages restored</item>
+    </plurals>
+    <plurals name="message_count">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
+    <plurals name="days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
 </resources>

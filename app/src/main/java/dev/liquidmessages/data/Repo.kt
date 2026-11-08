@@ -89,6 +89,8 @@ object Repo {
         private set
     lateinit var blocked: Blocked
         private set
+    lateinit var trash: dev.liquidmessages.sms.Trash
+        private set
 
     private val _countryConflict = MutableStateFlow<List<String>>(emptyList())
     /** Los chips son de países distintos y todavía no se eligió: la interfaz pregunta. */
@@ -128,6 +130,9 @@ object Repo {
         sims = SystemSims(app)
         store = SmsStore(app)
         blocked = Blocked(app)
+        trash = dev.liquidmessages.sms.Trash(app)
+        // Lo que pasó los 30 días en la papelera se borra para siempre.
+        scope.launch(Dispatchers.IO) { runCatching { trash.cleanUp() } }
         _isDefault.value = DefaultSms.isDefault(app)
         scope.launch {
             Stores.settings.state.map { it.defaultCountry to it.defaultAreaCode }.distinctUntilChanged().collect { (country, area) ->
