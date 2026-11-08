@@ -39,6 +39,15 @@ import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.StarOutline
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -174,6 +183,8 @@ fun ThreadScreen(
     initialImage: Uri?,
     padding: PaddingValues,
     onBack: () -> Unit,
+    /** Un mensaje para mostrar y resaltar al abrir (desde Destacados). */
+    focus: Long? = null,
 ) {
     val inbox by Repo.inbox.collectAsStateWithLifecycle()
     val book by Repo.book.collectAsStateWithLifecycle()
@@ -190,6 +201,11 @@ fun ThreadScreen(
     val scope = rememberCoroutineScope()
     // Texto de un programado (o de un envío deshecho) cancelado: vuelve al campo de escribir.
     var restore by remember { mutableStateOf<String?>(null) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var search by rememberSaveable { mutableStateOf("") }
+    var hit by rememberSaveable { mutableStateOf(0) }
+    // El mensaje resaltado (el de la búsqueda o el que se abrió desde Destacados).
+    var focused by remember { mutableStateOf(focus) }
 
     // Si se abrió por direcciones, el hilo que tenga exactamente esos participantes.
     val key = remember(addresses, numbers) { Conversations.key(addresses, numbers) }
@@ -248,6 +264,54 @@ fun ThreadScreen(
         )
     }
 
+    /** Detalles de un mensaje: tipo, de o para quién, horas, chip y estado. */
+    fun details(m: Message) {
+        val mine = m.box.outgoing
+        val rows = buildList {
+            add(str(R.string.detail_type) to (if (m.mms) "MMS" else "SMS"))
+            if (mine) add(str(R.string.detail_to) to people.joinToString(", "))
+            else add(str(R.string.detail_from) to (m.address.ifBlank { people.firstOrNull().orEmpty() }))
+            val full = Dates.header(Dates.day(m.date)) + " · " + Dates.time(m.date)
+            add(str(if (mine) R.string.detail_sent else R.string.detail_received) to full)
+            val sent = m.sentAt
+            if (!mine && sent != null && kotlin.math.abs(sent - m.date) >= 60_000) {
+                add(str(R.string.detail_sent_by_sender) to (Dates.header(Dates.day(sent)) + " · " + Dates.time(sent)))
+            }
+            sims.bySubscription(m.subscriptionId)?.let { c ->
+                add(str(R.string.detail_sim) to if (c.displayName.isNotBlank()) str(R.string.sim_label_named, c.slotNumber, c.displayName) else str(R.string.sim_label, c.slotNumber))
+            }
+            if (mine) {
+                add(
+                    str(R.string.detail_status) to str(
+                        when {
+                            m.box == MessageBox.FAILED -> R.string.failed
+                            m.box == MessageBox.OUTBOX || m.box == MessageBox.QUEUED -> R.string.sending
+                            m.delivered -> R.string.delivered
+                            else -> R.string.detail_sent_ok
+                        },
+                    ),
+                )
+            }
+            m.subject?.let { add(str(R.string.detail_subject) to it) }
+            if (m.attachments.isNotEmpty()) add(str(R.string.detail_attachments) to m.attachments.size.toString())
+        }
+        dialog(
+            DialogSpec(str(R.string.details)) { dismiss ->
+                val g = LocalGlass.current
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rows.forEach { (k, v) ->
+                        Column(Modifier.semantics(mergeDescendants = true) {}) {
+                            Text(k, fontSize = 13.sp, color = g.contentSecondary)
+                            Text(v, fontSize = 16.sp, color = g.content)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                GlassButton(str(R.string.close), dismiss, Modifier.fillMaxWidth())
+            },
+        )
+    }
+
     fun bubbleMenu(m: Message, code: String?) {
         sheet(
             SheetSpec(
@@ -259,6 +323,11 @@ fun ThreadScreen(
                             toast(str(R.string.copied))
                         })
                     }
+                    val isStarred = m.id in settings.starred
+                    add(SheetAction(str(if (isStarred) R.string.unstar else R.string.star), if (isStarred) Icons.Rounded.StarOutline else Icons.Rounded.Star) {
+                        Stores.settings.update { s -> s.copy(starred = if (m.id in s.starred) s.starred - m.id else s.starred + m.id) }
+                    })
+                    add(SheetAction(str(R.string.details), Icons.Rounded.Info) { details(m) })
                     if (code != null) {
                         add(SheetAction(str(R.string.copy_code, code), Icons.Rounded.Key) {
                             Actions.copy(context, code, sensitive = true)
@@ -296,6 +365,7 @@ fun ThreadScreen(
             Modifier.padding(horizontal = 16.dp),
             subtitle = if (group) dev.liquidmessages.util.plural(R.plurals.group_members, people.size) else w.subtitle,
         ) {
+            if (messages.isNotEmpty()) GlassIconButton(Icons.Rounded.Search, str(R.string.search_in_conversation), { searching = !searching; if (!searching) search = "" })
             if (single != null && SenderKind.of(single) != SenderKind.ALPHANUMERIC) {
                 GlassIconButton(Icons.Rounded.Call, str(R.string.call), { Actions.dial(context, single) })
                 val id = w.contactId
@@ -309,7 +379,63 @@ fun ThreadScreen(
 
         val state = rememberLazyListState()
         // Al llegar o enviar un mensaje, se baja al último si ya se estaba abajo.
-        LaunchedEffect(messages.size) { if (state.firstVisibleItemIndex <= 1) state.animateScrollToItem(0) }
+        LaunchedEffect(messages.size) { if (state.firstVisibleItemIndex <= 1 && focused == null) state.animateScrollToItem(0) }
+
+        // Buscar en la conversación: los que coinciden, del más nuevo al más viejo (como la lista).
+        val matches = remember(lines, search) {
+            val q = dev.liquidmessages.core.text.Fold.fold(search.trim())
+            if (q.isEmpty()) emptyList()
+            else lines.indices.filter { i -> (lines[i] as? Line.Msg)?.m?.let { dev.liquidmessages.core.text.Fold.fold(it.body).contains(q) } == true }
+        }
+        LaunchedEffect(matches) { hit = 0 }
+        LaunchedEffect(matches, hit) {
+            val i = matches.getOrNull(hit) ?: return@LaunchedEffect
+            focused = (lines[i] as Line.Msg).m.id
+            state.animateScrollToItem(i)
+        }
+        // Desde Destacados: se va al mensaje una vez, cuando ya está cargado.
+        var focusDone by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(lines, focus) {
+            if (focus == null || focusDone) return@LaunchedEffect
+            val i = lines.indexOfFirst { it is Line.Msg && it.m.id == focus }
+            if (i >= 0) {
+                focusDone = true
+                focused = focus
+                state.scrollToItem(i)
+            }
+        }
+        if (searching) {
+            SearchBar(
+                search, { search = it },
+                count = if (search.isBlank()) null else if (matches.isEmpty()) str(R.string.no_results) else str(R.string.match_of, hit + 1, matches.size),
+                canOlder = hit < matches.size - 1,
+                canNewer = hit > 0,
+                onOlder = { hit++ },
+                onNewer = { hit-- },
+                onDate = {
+                    val days = lines.withIndex().filter { it.value is Line.Day }
+                    dialog(
+                        DialogSpec(str(R.string.go_to_date)) { dismiss ->
+                            androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+                                items(days.size) { k ->
+                                    val (i, l) = days[k]
+                                    Text(
+                                        Dates.header((l as Line.Day).date),
+                                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                            .clickable { dismiss(); scope.launch { state.scrollToItem(i) } }
+                                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                                        fontSize = 16.sp,
+                                        color = LocalGlass.current.content,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            GlassButton(str(R.string.cancel), dismiss, Modifier.fillMaxWidth())
+                        },
+                    )
+                },
+            )
+        }
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(),
             state = state,
@@ -330,6 +456,8 @@ fun ThreadScreen(
                     )
                     is Line.Msg -> Bubble(
                         l.m,
+                        starred = l.m.id in settings.starred,
+                        focused = l.m.id == focused,
                         BubbleStyle(
                             contactColor = if (settings.bubbleColor == 1 && !l.m.box.outgoing) senderColors[l.m.address] else null,
                             fontSize = bubbleFont,
@@ -431,6 +559,8 @@ fun ThreadScreen(
 @Composable
 private fun Bubble(
     m: Message,
+    starred: Boolean,
+    focused: Boolean,
     style: BubbleStyle,
     sender: String?,
     chipLabel: String?,
@@ -452,7 +582,7 @@ private fun Bubble(
     val fg = if (mine) p.onAccent else p.content
     // Con la hora "al tocar", un toque en el mensaje la muestra u oculta; un error se ve siempre.
     var reveal by remember { mutableStateOf(false) }
-    val showMeta = style.timeAlways || reveal || failed || m.box == MessageBox.OUTBOX || m.box == MessageBox.QUEUED
+    val showMeta = style.timeAlways || reveal || failed || starred || m.box == MessageBox.OUTBOX || m.box == MessageBox.QUEUED
     val jumbo = remember(m.body) { m.attachments.isEmpty() && m.subject == null && isOnlyEmoji(m.body) }
     val meta = listOfNotNull(
         Dates.time(m.date),
@@ -469,6 +599,7 @@ private fun Bubble(
         Column(
             Modifier
                 .widthIn(max = 300.dp)
+                .then(if (focused) Modifier.border(2.dp, p.accentFg, RoundedCornerShape(20.dp, 20.dp, if (mine) 6.dp else 20.dp, if (mine) 20.dp else 6.dp)) else Modifier)
                 .clip(RoundedCornerShape(20.dp, 20.dp, if (mine) 6.dp else 20.dp, if (mine) 20.dp else 6.dp))
                 .then(if (jumbo) Modifier else Modifier.background(bg))
                 .combinedClickable(remember { MutableInteractionSource() }, null, onLongClick = onLongClick, onClick = { if (!style.timeAlways) reveal = !reveal }),
@@ -496,6 +627,7 @@ private fun Bubble(
         }
         if (showMeta) {
             Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (starred) Icon(styled(Icons.Rounded.Star), str(R.string.starred_one), Modifier.size(14.dp).padding(end = 2.dp), tint = p.accentFg)
                 if (failed) Icon(styled(Icons.Rounded.ErrorOutline), null, Modifier.size(14.dp).padding(end = 2.dp), tint = p.dangerText)
                 Text(meta, fontSize = 12.sp, color = if (failed) p.dangerText else p.contentSecondary)
             }
@@ -699,6 +831,32 @@ private fun Composer(
                 prominent = true,
                 enabled = canSend,
             )
+        }
+    }
+}
+
+/** Barra de búsqueda dentro de una conversación: el texto, cuántos hay, anterior/siguiente e "ir a fecha". */
+@Composable
+private fun SearchBar(
+    value: String,
+    onChange: (String) -> Unit,
+    count: String?,
+    canOlder: Boolean,
+    canNewer: Boolean,
+    onOlder: () -> Unit,
+    onNewer: () -> Unit,
+    onDate: () -> Unit,
+) {
+    val p = LocalGlass.current
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        dev.liquidmessages.ui.components.SearchField(value, onChange, str(R.string.search_in_conversation), str(R.string.clear), focusRequester = focus)
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(count.orEmpty(), Modifier.weight(1f).semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }, fontSize = 14.sp, color = p.contentSecondary)
+            GlassIconButton(Icons.Rounded.CalendarMonth, str(R.string.go_to_date), onDate, size = 44.dp)
+            GlassIconButton(Icons.Rounded.KeyboardArrowUp, str(R.string.older_match), onOlder, size = 44.dp, enabled = canOlder)
+            GlassIconButton(Icons.Rounded.KeyboardArrowDown, str(R.string.newer_match), onNewer, size = 44.dp, enabled = canNewer)
         }
     }
 }

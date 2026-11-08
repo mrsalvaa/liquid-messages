@@ -40,6 +40,8 @@ data class Message(
     val pending: Boolean = false,
     /** SMS enviado con informe de entrega que ya llegó a destino. */
     val delivered: Boolean = false,
+    /** Recibido: la hora en que lo mandó el remitente (la pone la red); null si no se sabe. */
+    val sentAt: Long? = null,
 ) {
     /** Lo que se puede contar de un mensaje en una línea, sin el texto: "Foto", "2 adjuntos". */
     val hasContent: Boolean get() = body.isNotBlank() || attachments.isNotEmpty() || subject != null

@@ -28,6 +28,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonAdd
@@ -94,6 +96,7 @@ fun ConversationsScreen(
     onSettings: () -> Unit,
     onArchived: () -> Unit,
     onBack: () -> Unit,
+    onStarred: () -> Unit = {},
 ) {
     val inbox by Repo.inbox.collectAsStateWithLifecycle()
     val book by Repo.book.collectAsStateWithLifecycle()
@@ -249,7 +252,18 @@ fun ConversationsScreen(
                                 Repo.io { threads.forEach { Repo.store.markRead(it) } }
                             })
                         }
-                        GlassIconButton(Icons.Rounded.Archive, str(R.string.archived), onArchived)
+                        // Lo que no es la bandeja principal, en un menú: archivadas, destacados…
+                        GlassIconButton(androidx.compose.material.icons.Icons.Rounded.MoreHoriz, str(R.string.more), {
+                            sheet(
+                                SheetSpec(
+                                    str(R.string.more),
+                                    listOf(
+                                        SheetAction(str(R.string.archived), Icons.Rounded.Archive, onClick = onArchived),
+                                        SheetAction(str(R.string.starred), Icons.Rounded.Star, onClick = onStarred),
+                                    ),
+                                ),
+                            )
+                        })
                         GlassIconButton(Icons.Rounded.Settings, str(R.string.settings), onSettings)
                     }
                 }

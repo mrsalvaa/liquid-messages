@@ -89,12 +89,13 @@ import java.util.Locale
 /** Pantallas que se abren encima de la lista. */
 sealed interface Overlay {
     /** Una conversación, por su hilo o, si es nueva, por las direcciones. */
-    data class Thread(val threadId: Long?, val addresses: List<String>, val text: String = "", val image: android.net.Uri? = null) : Overlay
+    data class Thread(val threadId: Long?, val addresses: List<String>, val text: String = "", val image: android.net.Uri? = null, val focus: Long? = null) : Overlay
     /** Elegir a quién escribir; [text] e [image] vienen de compartir desde otra app. */
     data class New(val text: String = "", val image: android.net.Uri? = null) : Overlay
     data object Blocked : Overlay
     data object Trash : Overlay
     data object Archived : Overlay
+    data object Starred : Overlay
     data object Settings : Overlay
 }
 
@@ -314,6 +315,7 @@ private fun MessagesUi(animated: Boolean) {
                                 onOpen = { push(Overlay.Thread(it.threadId, it.addresses)) },
                                 onSettings = { push(Overlay.Settings) },
                                 onArchived = { push(Overlay.Archived) },
+                                onStarred = { push(Overlay.Starred) },
                                 onBack = {},
                             )
                             Overlay.Archived -> ConversationsScreen(
@@ -324,7 +326,8 @@ private fun MessagesUi(animated: Boolean) {
                                 onArchived = {},
                                 onBack = ::pop,
                             )
-                            is Overlay.Thread -> ThreadScreen(current.threadId, current.addresses, current.text, current.image, padding, ::pop)
+                            is Overlay.Thread -> ThreadScreen(current.threadId, current.addresses, current.text, current.image, padding, ::pop, focus = current.focus)
+                            Overlay.Starred -> dev.liquidmessages.ui.screens.StarredScreen(padding, ::pop) { m, people -> push(Overlay.Thread(m.threadId, people, focus = m.id)) }
                             is Overlay.New -> NewMessageScreen(padding, ::pop) { addresses ->
                                 // La pantalla de elegir se reemplaza por la conversación: volver lleva a la lista.
                                 pop()

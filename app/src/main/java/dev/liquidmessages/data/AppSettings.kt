@@ -80,6 +80,9 @@ data class AppSettings(
     /** Respuestas rápidas: frases que se insertan en el campo de escribir con un toque. */
     val quickReplies: List<String> = listOf("Ahora no puedo, te escribo después.", "Llego en 10 minutos.", "Dale, gracias.", "¿Te puedo llamar?"),
 
+    /** Mensajes destacados, por id (los MMS en negativo, como los lee SystemSms). */
+    val starred: Set<Long> = emptySet(),
+
     // Conversaciones, por su clave de participantes (Conversations.key), no por thread_id.
     val pinned: Set<String> = emptySet(),
     val archived: Set<String> = emptySet(),

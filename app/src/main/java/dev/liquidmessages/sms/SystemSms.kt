@@ -36,6 +36,7 @@ class SystemSms(context: Context) {
             arrayOf(
                 Telephony.Sms._ID, Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY,
                 Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.READ, Telephony.Sms.SUBSCRIPTION_ID, Telephony.Sms.STATUS,
+                Telephony.Sms.DATE_SENT,
             ),
             null,
             null,
@@ -54,6 +55,7 @@ class SystemSms(context: Context) {
                             read = c.getInt(6) != 0,
                             subscriptionId = c.intOrNull(7)?.takeIf { it >= 0 },
                             delivered = c.intOrNull(8) == Telephony.Sms.STATUS_COMPLETE,
+                            sentAt = c.getLong(9).takeIf { it > 0 },
                         ),
                     )
                 }
@@ -82,7 +84,7 @@ class SystemSms(context: Context) {
         }
         return resolver.query(
             Telephony.Mms.CONTENT_URI,
-            arrayOf(Telephony.Mms._ID, Telephony.Mms.THREAD_ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX, Telephony.Mms.READ, Telephony.Mms.SUBSCRIPTION_ID, Telephony.Mms.MESSAGE_TYPE, Telephony.Mms.SUBJECT),
+            arrayOf(Telephony.Mms._ID, Telephony.Mms.THREAD_ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX, Telephony.Mms.READ, Telephony.Mms.SUBSCRIPTION_ID, Telephony.Mms.MESSAGE_TYPE, Telephony.Mms.SUBJECT, Telephony.Mms.DATE_SENT),
             null,
             null,
             null,
@@ -120,6 +122,7 @@ class SystemSms(context: Context) {
                             attachments = p?.files.orEmpty(),
                             subject = c.getString(7)?.takeIf { it.isNotBlank() },
                             pending = c.getInt(6) == PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND,
+                            sentAt = c.getLong(8).takeIf { it > 0 }?.times(1000),
                         ),
                     )
                 }
