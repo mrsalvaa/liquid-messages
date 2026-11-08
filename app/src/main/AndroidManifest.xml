@@ -73,21 +73,17 @@
         android:name=".MessagesApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:icon="@android:drawable/sym_action_chat"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.LiquidMessages">
 
-        <!-- Ícono provisorio: los de la suite van después de que apruebes la muestra. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <!-- "Mensaje" desde Phone, Contacts u otra app: abre la conversación con el texto escrito, sin enviar. -->
             <intent-filter>
                 <action android:name="android.intent.action.SENDTO" />
@@ -107,6 +103,59 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+
+        <!-- Un alias por ícono de la app: solo uno está activo (ver util/AppIcons.kt). -->
+        <activity-alias
+            android:name=".IconLiquid"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconMaterial"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_material"
+            android:roundIcon="@mipmap/ic_launcher_material"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconSamsung"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_samsung"
+            android:roundIcon="@mipmap/ic_launcher_samsung"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconIphone"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_iphone"
+            android:roundIcon="@mipmap/ic_launcher_iphone"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- SMS que llega. Solo el sistema puede mandarlo (BROADCAST_SMS). -->
         <receiver

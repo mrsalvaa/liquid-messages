@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.liquidmessages.util
 
+import dev.liquidmessages.R
+
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -9,9 +11,12 @@ import android.content.pm.PackageManager
 object AppIcons {
     data class Icon(val name: String, val alias: String, val background: Int, val foreground: Int)
 
-    // Vacía hasta que se aprueben los íconos de Mensajes (ver DESIGN.md): mientras tanto la app usa
-    // un ícono provisorio y Apariencia no muestra la fila de íconos.
-    val all: List<Icon> = emptyList()
+    val all = listOf(
+        Icon("Liquid", "IconLiquid", R.drawable.ic_launcher_background, R.drawable.ic_launcher_foreground),
+        Icon("Material", "IconMaterial", R.drawable.ic_launcher_material_background, R.drawable.ic_launcher_material_foreground),
+        Icon("Samsung", "IconSamsung", R.drawable.ic_launcher_samsung_background, R.drawable.ic_launcher_samsung_foreground),
+        Icon("iPhone", "IconIphone", R.drawable.ic_launcher_iphone_background, R.drawable.ic_launcher_iphone_foreground),
+    )
 
     /**
      * Íconos que ya no se ofrecen. El alias sigue en el manifest, apagado: si alguien lo tenía elegido
