@@ -52,6 +52,22 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
         SectionLabel(str(R.string.appearance))
         AppearanceCard(s, edit)
 
+        SectionLabel(str(R.string.look))
+        GlassCard {
+            Text(str(R.string.bubble_color), fontSize = 16.sp)
+            ChipRow(listOf(0, 1), s.bubbleColor, { str(if (it == 0) R.string.bubble_gray else R.string.bubble_contact) }) { v -> edit { it.copy(bubbleColor = v) } }
+            Text(str(R.string.text_size), Modifier.padding(top = 12.dp), fontSize = 16.sp)
+            ChipRow(listOf(0, 1, 2), s.textSize, { str(listOf(R.string.size_small, R.string.size_normal, R.string.size_large)[it]) }) { v -> edit { it.copy(textSize = v) } }
+            Text(str(R.string.time_shown), Modifier.padding(top = 12.dp), fontSize = 16.sp)
+            ChipRow(listOf(0, 1), s.timeMode, { str(if (it == 0) R.string.time_always else R.string.time_on_tap) }) { v -> edit { it.copy(timeMode = v) } }
+            SwitchRow(str(R.string.compact_list), s.compactList, { v -> edit { it.copy(compactList = v) } }, Modifier.padding(top = 4.dp), subtitle = str(R.string.compact_list_hint))
+            Text(str(R.string.swipe_right), Modifier.padding(top = 12.dp), fontSize = 16.sp)
+            ChipRow(SwipeAction.entries.map { it.value }, s.swipeRight, { str(SwipeAction.of(it).label) }) { v -> edit { it.copy(swipeRight = v) } }
+            Text(str(R.string.swipe_left), Modifier.padding(top = 12.dp), fontSize = 16.sp)
+            ChipRow(SwipeAction.entries.map { it.value }, s.swipeLeft, { str(SwipeAction.of(it).label) }) { v -> edit { it.copy(swipeLeft = v) } }
+            Text(str(R.string.swipe_hint), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = p.contentSecondary)
+        }
+
         // Con un solo chip no hay nada que elegir.
         if (sims.multiple) {
             SectionLabel(str(R.string.sims))

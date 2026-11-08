@@ -120,6 +120,8 @@ fun ConversationRow(
     modifier: Modifier = Modifier,
     /** Para la búsqueda: el mensaje que coincide, en vez del último. */
     shown: Message = c.last,
+    /** Lista compacta: fila más baja, avatar más chico y una sola línea de vista previa. */
+    compact: Boolean = false,
 ) {
     val p = LocalGlass.current
     val unread = c.unread > 0
@@ -129,7 +131,7 @@ fun ConversationRow(
     Row(
         modifier
             .fillMaxWidth()
-            .heightIn(min = 72.dp)
+            .heightIn(min = if (compact) 56.dp else 72.dp)
             .clip(RoundedCornerShape(16.dp))
             .combinedClickable(remember { MutableInteractionSource() }, null, role = Role.Button, onLongClick = onLongClick, onClick = onClick)
             .semantics(mergeDescendants = true) {
@@ -142,11 +144,11 @@ fun ConversationRow(
                     time,
                 ).joinToString(", ")
             }
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = if (compact) 4.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ContactAvatar(who.title, size = 48.dp, photoUri = who.photoUri)
-        Spacer(Modifier.width(14.dp))
+        ContactAvatar(who.title, size = if (compact) 38.dp else 48.dp, photoUri = who.photoUri)
+        Spacer(Modifier.width(if (compact) 12.dp else 14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -174,7 +176,7 @@ fun ConversationRow(
                     Modifier.weight(1f),
                     fontSize = 15.sp,
                     color = if (unread) p.content else p.contentSecondary,
-                    maxLines = 2,
+                    maxLines = if (compact) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (unread) UnreadBadge(c.unread)

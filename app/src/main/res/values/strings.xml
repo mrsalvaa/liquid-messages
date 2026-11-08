@@ -169,4 +169,22 @@
     <string name="backup_failed_some">%1$d couldn\'t be imported.</string>
     <string name="backup_error">The file couldn\'t be read or written.</string>
     <string name="ok">OK</string>
+    <string name="swipe_none">Nothing</string>
+    <string name="moved_to_trash">Moved to the trash</string>
+    <string name="look">Conversations</string>
+    <string name="bubble_color">Received bubbles</string>
+    <string name="bubble_gray">Gray</string>
+    <string name="bubble_contact">Contact's color</string>
+    <string name="text_size">Text size</string>
+    <string name="size_small">Small</string>
+    <string name="size_normal">Normal</string>
+    <string name="size_large">Large</string>
+    <string name="time_shown">Message time</string>
+    <string name="time_always">Always</string>
+    <string name="time_on_tap">When tapped</string>
+    <string name="compact_list">Compact list</string>
+    <string name="compact_list_hint">Shorter rows with one line of preview.</string>
+    <string name="swipe_right">Swipe right</string>
+    <string name="swipe_left">Swipe left</string>
+    <string name="swipe_hint">Delete goes to the trash. Delete and mark as read need Messages to be the default SMS app.</string>
 </resources>

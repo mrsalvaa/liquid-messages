@@ -53,6 +53,20 @@ data class AppSettings(
      */
     val appLock: Boolean = false,
 
+    // --- Aspecto de los mensajes ---
+
+    /** Burbujas recibidas: 0 = gris tenue, 1 = el color del contacto (el de su avatar). Las tuyas, siempre con el énfasis. */
+    val bubbleColor: Int = 0,
+    /** Letra de los mensajes: 0 = chica, 1 = normal, 2 = grande. */
+    val textSize: Int = 1,
+    /** Lista compacta: filas más bajas y una sola línea de vista previa. */
+    val compactList: Boolean = false,
+    /** Hora de cada mensaje: 0 = siempre, 1 = solo al tocar el mensaje. */
+    val timeMode: Int = 0,
+    /** Deslizar una conversación a la derecha / a la izquierda (ver SwipeAction). */
+    val swipeRight: Int = 1,
+    val swipeLeft: Int = 0,
+
     // Conversaciones, por su clave de participantes (Conversations.key), no por thread_id.
     val pinned: Set<String> = emptySet(),
     val archived: Set<String> = emptySet(),

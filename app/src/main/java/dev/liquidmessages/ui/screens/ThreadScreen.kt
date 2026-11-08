@@ -121,6 +121,35 @@ private sealed interface Line {
     data class Msg(val m: Message, val code: String?) : Line
 }
 
+/** Cómo se ven las burbujas, según Ajustes. */
+private class BubbleStyle(val contactColor: androidx.compose.ui.graphics.Color?, val fontSize: androidx.compose.ui.unit.TextUnit, val timeAlways: Boolean)
+
+/** Letra de los mensajes según el ajuste (0 = chica, 1 = normal, 2 = grande). */
+fun textSizeOf(setting: Int) = when (setting) {
+    0 -> 14.sp
+    2 -> 19.sp
+    else -> 16.sp
+}
+
+/** Un mensaje de solo emojis (hasta tres, sin letras ni números). */
+private fun isOnlyEmoji(text: String): Boolean {
+    val t = text.trim()
+    if (t.isEmpty() || t.length > 24) return false
+    var count = 0
+    var i = 0
+    while (i < t.length) {
+        val cp = t.codePointAt(i)
+        val type = Character.getType(cp)
+        when {
+            cp == 0x200D || cp == 0xFE0F || cp in 0x1F3FB..0x1F3FF || Character.isWhitespace(cp) -> Unit
+            type == Character.OTHER_SYMBOL.toInt() || type == Character.SURROGATE.toInt() -> count++
+            else -> return false
+        }
+        i += Character.charCount(cp)
+    }
+    return count in 1..3
+}
+
 /** Una foto elegida para enviar: lo que se manda y la miniatura que se muestra. */
 private class Picked(val image: MmsTransport.Image, val preview: Bitmap)
 
@@ -275,6 +304,11 @@ fun ThreadScreen(
                     )
                     is Line.Msg -> Bubble(
                         l.m,
+                        BubbleStyle(
+                            contactColor = if (settings.bubbleColor == 1 && !l.m.box.outgoing) dev.liquidmessages.ui.components.avatarColor(who(listOf(l.m.address.ifBlank { people.firstOrNull().orEmpty() }), book, numbers).title, p.dark) else null,
+                            fontSize = textSizeOf(settings.textSize),
+                            timeAlways = settings.timeMode == 0,
+                        ),
                         sender = if (group && !l.m.box.outgoing) who(listOf(l.m.address), book, numbers).title else null,
                         chipLabel = if (sims.multiple) sims.bySubscription(l.m.subscriptionId)?.let { str(R.string.sim_label, it.slotNumber) } else null,
                         onLongClick = { bubbleMenu(l.m, l.code) },
@@ -326,6 +360,7 @@ fun ThreadScreen(
 @Composable
 private fun Bubble(
     m: Message,
+    style: BubbleStyle,
     sender: String?,
     chipLabel: String?,
     onLongClick: () -> Unit,
@@ -336,8 +371,18 @@ private fun Bubble(
     val p = LocalGlass.current
     val mine = m.box.outgoing
     val failed = m.box == MessageBox.FAILED
-    val bg = if (mine) p.accentFill() else if (p.solid) p.levels.getOrElse(1) { p.content.copy(alpha = 0.08f) } else p.content.copy(alpha = if (p.dark) 0.12f else 0.07f)
+    val tint = style.contactColor
+    val bg = when {
+        mine -> p.accentFill()
+        tint != null -> tint.copy(alpha = if (p.dark) 0.34f else 0.26f)
+        p.solid -> p.levels.getOrElse(1) { p.content.copy(alpha = 0.08f) }
+        else -> p.content.copy(alpha = if (p.dark) 0.12f else 0.07f)
+    }
     val fg = if (mine) p.onAccent else p.content
+    // Con la hora "al tocar", un toque en el mensaje la muestra u oculta; un error se ve siempre.
+    var reveal by remember { mutableStateOf(false) }
+    val showMeta = style.timeAlways || reveal || failed || m.box == MessageBox.OUTBOX || m.box == MessageBox.QUEUED
+    val jumbo = remember(m.body) { m.attachments.isEmpty() && m.subject == null && isOnlyEmoji(m.body) }
     val meta = listOfNotNull(
         Dates.time(m.date),
         chipLabel,
@@ -353,8 +398,8 @@ private fun Bubble(
             Modifier
                 .widthIn(max = 300.dp)
                 .clip(RoundedCornerShape(20.dp, 20.dp, if (mine) 6.dp else 20.dp, if (mine) 20.dp else 6.dp))
-                .background(bg)
-                .combinedClickable(remember { MutableInteractionSource() }, null, onLongClick = onLongClick, onClick = {}),
+                .then(if (jumbo) Modifier else Modifier.background(bg))
+                .combinedClickable(remember { MutableInteractionSource() }, null, onLongClick = onLongClick, onClick = { if (!style.timeAlways) reveal = !reveal }),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             when {
@@ -366,17 +411,24 @@ private fun Bubble(
                 else -> {
                     m.attachments.forEach { a -> AttachmentView(a, fg, onOpen) }
                     m.subject?.let { Text(it, Modifier.padding(start = 14.dp, end = 14.dp, top = 9.dp), color = fg, fontWeight = FontWeight.SemiBold, fontSize = 15.sp) }
-                    if (m.body.isNotBlank()) {
-                        Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) { MessageText(m.body, fg, onLink) }
+                    if (jumbo) {
+                        // Solo emojis (hasta tres): grandes y sin burbuja, como en otras apps de mensajes.
+                        Text(m.body.trim(), Modifier.padding(horizontal = 4.dp), fontSize = style.fontSize * 2.6f)
+                    } else if (m.body.isNotBlank()) {
+                        Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) { MessageText(m.body, fg, onLink, fontSize = style.fontSize) }
                     } else if (m.attachments.isEmpty() && m.subject == null) {
                         Text(str(R.string.mms_placeholder), Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = fg.copy(alpha = 0.75f), fontSize = 15.sp)
                     }
                 }
             }
         }
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (failed) Icon(styled(Icons.Rounded.ErrorOutline), null, Modifier.size(14.dp).padding(end = 2.dp), tint = p.dangerText)
-            Text(meta, fontSize = 12.sp, color = if (failed) p.dangerText else p.contentSecondary)
+        if (showMeta) {
+            Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (failed) Icon(styled(Icons.Rounded.ErrorOutline), null, Modifier.size(14.dp).padding(end = 2.dp), tint = p.dangerText)
+                Text(meta, fontSize = 12.sp, color = if (failed) p.dangerText else p.contentSecondary)
+            }
+        } else {
+            Spacer(Modifier.height(2.dp))
         }
     }
 }

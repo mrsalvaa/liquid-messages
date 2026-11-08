@@ -2,6 +2,7 @@
 package dev.liquidmessages.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.rounded.DoneAll
 import dev.liquidmessages.ui.glass.LocalDialog
 import dev.liquidmessages.ui.glass.GlassCard
 import dev.liquidmessages.ui.glass.GlassButton
@@ -273,7 +274,94 @@ fun ConversationsScreen(
             }
         }
         items(list.orEmpty(), key = { it.c.threadId }, contentType = { "row" }) { r ->
-            ConversationRow(r.c, r.who, onClick = { onOpen(r.c) }, onLongClick = { menu(r) }, shown = r.shown)
+            SwipeRow(
+                right = SwipeAction.of(settings.swipeRight).takeIf { it.available(isDefault) },
+                left = SwipeAction.of(settings.swipeLeft).takeIf { it.available(isDefault) },
+                pinned = r.c.prefs.pinned,
+                archivedView = archived,
+                onSwipe = { action ->
+                    when (action) {
+                        SwipeAction.ARCHIVE -> toggle({ it.archived }, r.c.key) { copy(archived = it) }
+                        SwipeAction.PIN -> toggle({ it.pinned }, r.c.key) { copy(pinned = it) }
+                        SwipeAction.READ -> Repo.io { Repo.store.markRead(r.c.threadId) }
+                        SwipeAction.DELETE -> {
+                            Repo.io { Repo.trash.deleteThreads(mapOf(r.c.threadId to r.c.addresses)) }
+                            toast(str(R.string.moved_to_trash))
+                        }
+                        SwipeAction.NONE -> Unit
+                    }
+                },
+            ) {
+                ConversationRow(r.c, r.who, onClick = { onOpen(r.c) }, onLongClick = { menu(r) }, shown = r.shown, compact = settings.compactList)
+            }
         }
     }
+}
+
+/** Lo que hace deslizar una conversación (se elige en Ajustes, una por lado). */
+enum class SwipeAction(val value: Int, val label: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    NONE(0, R.string.swipe_none, Icons.Rounded.Block),
+    ARCHIVE(1, R.string.archive, Icons.Rounded.Archive),
+    DELETE(2, R.string.delete, Icons.Rounded.DeleteOutline),
+    READ(3, R.string.notif_mark_read, Icons.Rounded.DoneAll),
+    PIN(4, R.string.pin, Icons.Rounded.PushPin);
+
+    /** Borrar y marcar como leída solo los puede hacer la app predeterminada. */
+    fun available(isDefault: Boolean) = this != NONE && (isDefault || (this != DELETE && this != READ))
+
+    companion object {
+        fun of(value: Int) = entries.firstOrNull { it.value == value } ?: NONE
+    }
+}
+
+/**
+ * Una fila que se puede deslizar. Al pasar un tercio aparece el ícono de la acción del lado; al
+ * soltar se hace y la fila vuelve (si la acción la saca de la lista, se va con ella).
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeRow(
+    right: SwipeAction?,
+    left: SwipeAction?,
+    pinned: Boolean,
+    archivedView: Boolean,
+    onSwipe: (SwipeAction) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (right == null && left == null) {
+        content()
+        return
+    }
+    val p = LocalGlass.current
+    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd -> right?.let(onSwipe)
+                androidx.compose.material3.SwipeToDismissBoxValue.EndToStart -> left?.let(onSwipe)
+                else -> Unit
+            }
+            false // La fila vuelve a su lugar; si la acción la saca, la lista ya no la tiene.
+        },
+        positionalThreshold = { it * 0.33f },
+    )
+    androidx.compose.material3.SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = right != null,
+        enableDismissFromEndToStart = left != null,
+        backgroundContent = {
+            val toRight = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
+            val action = (if (toRight) right else left) ?: return@SwipeToDismissBox
+            val icon = when {
+                action == SwipeAction.ARCHIVE && archivedView -> Icons.Rounded.Unarchive
+                else -> action.icon
+            }
+            val color = if (action == SwipeAction.DELETE) p.dangerText else p.accentFg
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                contentAlignment = if (toRight) androidx.compose.ui.Alignment.CenterStart else androidx.compose.ui.Alignment.CenterEnd,
+            ) {
+                androidx.compose.material3.Icon(dev.liquidmessages.ui.glass.styled(icon), null, tint = color)
+            }
+        },
+    ) { content() }
 }

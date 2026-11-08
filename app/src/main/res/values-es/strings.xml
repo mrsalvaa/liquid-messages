@@ -174,4 +174,22 @@
     <string name="backup_failed_some">%1$d no se pudieron importar.</string>
     <string name="backup_error">No se pudo leer o escribir el archivo.</string>
     <string name="ok">Listo</string>
+    <string name="swipe_none">Nada</string>
+    <string name="moved_to_trash">Se movió a la papelera</string>
+    <string name="look">Conversaciones</string>
+    <string name="bubble_color">Burbujas recibidas</string>
+    <string name="bubble_gray">Gris</string>
+    <string name="bubble_contact">Color del contacto</string>
+    <string name="text_size">Tamaño de letra</string>
+    <string name="size_small">Chica</string>
+    <string name="size_normal">Normal</string>
+    <string name="size_large">Grande</string>
+    <string name="time_shown">Hora de los mensajes</string>
+    <string name="time_always">Siempre</string>
+    <string name="time_on_tap">Al tocar</string>
+    <string name="compact_list">Lista compacta</string>
+    <string name="compact_list_hint">Filas más bajas con una línea de vista previa.</string>
+    <string name="swipe_right">Deslizar a la derecha</string>
+    <string name="swipe_left">Deslizar a la izquierda</string>
+    <string name="swipe_hint">Borrar manda a la papelera. Borrar y marcar como leído necesitan que Mensajes sea la app de SMS predeterminada.</string>
 </resources>

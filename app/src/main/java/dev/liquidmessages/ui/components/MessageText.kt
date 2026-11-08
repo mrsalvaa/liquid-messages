@@ -21,7 +21,7 @@ import dev.liquidmessages.core.text.Links
  * directamente: llama a [onLink], que decide (un enlace web pide confirmación con su dominio).
  */
 @Composable
-fun MessageText(text: String, color: Color, onLink: (Links.Link) -> Unit, modifier: Modifier = Modifier) {
+fun MessageText(text: String, color: Color, onLink: (Links.Link) -> Unit, modifier: Modifier = Modifier, fontSize: androidx.compose.ui.unit.TextUnit = 16.sp) {
     val links = remember(text) { Links.find(text) }
     val latest by rememberUpdatedState(onLink)
     val styled = remember(text, color, links) {
@@ -33,5 +33,5 @@ fun MessageText(text: String, color: Color, onLink: (Links.Link) -> Unit, modifi
             }
         }
     }
-    Text(styled, modifier, color = color, fontSize = 16.sp, lineHeight = 21.sp)
+    Text(styled, modifier, color = color, fontSize = fontSize, lineHeight = fontSize * 1.3f)
 }
