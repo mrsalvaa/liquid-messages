@@ -133,4 +133,11 @@
         <item quantity="many">%1$d personas</item>
         <item quantity="other">%1$d personas</item>
     </plurals>
+    <string name="lock_prompt_title">Desbloquear Mensajes</string>
+    <string name="lock_title">Mensajes está bloqueada</string>
+    <string name="lock_unlock">Desbloquear</string>
+    <string name="security">Seguridad</string>
+    <string name="app_lock">Bloquear con huella o PIN</string>
+    <string name="app_lock_hint">Pide el desbloqueo del celular al abrir la app o al volver después de 30 segundos. Las notificaciones pasan a decir solo "Mensaje nuevo", sin responder.</string>
+    <string name="app_lock_unavailable">Primero poné un bloqueo de pantalla en el celular.</string>
 </resources>

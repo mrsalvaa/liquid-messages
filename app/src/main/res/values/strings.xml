@@ -131,4 +131,11 @@
         <item quantity="one">%1$d person</item>
         <item quantity="other">%1$d people</item>
     </plurals>
+    <string name="lock_prompt_title">Unlock Messages</string>
+    <string name="lock_title">Messages is locked</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="security">Security</string>
+    <string name="app_lock">Lock with fingerprint or PIN</string>
+    <string name="app_lock_hint">Asks for the phone\'s unlock when opening the app or coming back after 30 seconds. Notifications then only say "New message", without replying.</string>
+    <string name="app_lock_unavailable">Set a screen lock on the phone first.</string>
 </resources>

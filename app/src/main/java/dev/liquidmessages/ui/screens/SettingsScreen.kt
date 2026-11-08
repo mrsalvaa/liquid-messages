@@ -21,6 +21,7 @@ import dev.liquidmessages.core.sim.SimPolicy
 import dev.liquidmessages.data.AppSettings
 import dev.liquidmessages.data.Repo
 import dev.liquidmessages.data.Stores
+import dev.liquidmessages.security.AppLock
 import dev.liquidmessages.ui.components.SwitchRow
 import dev.liquidmessages.ui.glass.GlassCard
 import dev.liquidmessages.ui.glass.LocalGlass
@@ -74,6 +75,26 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
                     Text(str(R.string.sim_policy_conversation_hint), fontSize = 13.sp, color = p.contentSecondary)
                 }
             }
+        }
+
+        SectionLabel(str(R.string.security))
+        GlassCard {
+            val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
+            val toast = LocalToast.current
+            SwitchRow(str(R.string.app_lock), s.appLock, { on ->
+                val a = activity ?: return@SwitchRow
+                if (on && !AppLock.available(a)) {
+                    toast(str(R.string.app_lock_unavailable))
+                    return@SwitchRow
+                }
+                // Activar o desactivar también pide desbloquear: nadie lo cambia con el celular ajeno.
+                AppLock.authenticate(a) { ok ->
+                    if (ok) {
+                        edit { it.copy(appLock = on) }
+                        AppLock.unlockedNow()
+                    }
+                }
+            }, subtitle = str(R.string.app_lock_hint))
         }
 
         SectionLabel(str(R.string.writing))

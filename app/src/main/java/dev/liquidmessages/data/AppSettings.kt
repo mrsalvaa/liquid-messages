@@ -47,6 +47,12 @@ data class AppSettings(
      */
     val simplifyAccents: Boolean = false,
 
+    /**
+     * Pedir la huella o el PIN del celular al abrir la app o al volver después de 30 segundos.
+     * Con esto activo, las notificaciones no muestran el contenido ni permiten responder.
+     */
+    val appLock: Boolean = false,
+
     // Conversaciones, por su clave de participantes (Conversations.key), no por thread_id.
     val pinned: Set<String> = emptySet(),
     val archived: Set<String> = emptySet(),

@@ -137,6 +137,21 @@ object Notifier {
             nm.cancel(threadId.toInt())
             return
         }
+        // Con la app bloqueada: ni quién ni qué, y sin responder (saltearía el bloqueo).
+        if (Stores.settings.value.appLock) {
+            nm.notify(
+                threadId.toInt(),
+                Notification.Builder(context, CHANNEL_MESSAGES)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle(context.getString(R.string.notif_new_public))
+                    .setCategory(Notification.CATEGORY_MESSAGE)
+                    .setContentIntent(openThread(context, threadId, participants.singleOrNull()))
+                    .setAutoCancel(true)
+                    .setNumber(messages.size)
+                    .build(),
+            )
+            return
+        }
         val me = Person.Builder().setName(context.getString(R.string.you)).setKey("me").build()
         val group = participants.size > 1
         val style = Notification.MessagingStyle(me).setGroupConversation(group)

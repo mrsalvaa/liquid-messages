@@ -55,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.liquidmessages.data.Repo
+import dev.liquidmessages.security.AppLock
+import dev.liquidmessages.ui.screens.LockScreen
 import dev.liquidmessages.data.Stores
 import dev.liquidmessages.ui.glass.ActionSheetHost
 import dev.liquidmessages.ui.glass.DialogHost
@@ -102,6 +104,16 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         Repo.start()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppLock.returned()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        AppLock.left()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -153,9 +165,14 @@ class MainActivity : ComponentActivity() {
         preferHighestRefreshRate()
         setContent {
             val settings by Stores.settings.state.collectAsStateWithLifecycle()
+            val locked by AppLock.locked.collectAsStateWithLifecycle()
             SystemBarsFor(isDarkTheme(settings.themeMode))
+            // Con el bloqueo activo, la vista previa de apps recientes no muestra las conversaciones.
+            LaunchedEffect(settings.appLock) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(!settings.appLock)
+            }
             GlassTheme(settings.glassStyle) {
-                MessagesUi(settings.animatedBackground)
+                if (settings.appLock && locked) LockScreen { AppLock.authenticate(this) } else MessagesUi(settings.animatedBackground)
             }
         }
     }
