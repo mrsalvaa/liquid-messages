@@ -115,8 +115,13 @@ object Repo {
         val image: android.net.Uri? = null,
     )
 
-    /** Hace algo con la base de mensajes fuera del hilo principal (marcar, borrar, enviar). */
+    /**
+     * Hace algo con la base de mensajes fuera del hilo principal (marcar, borrar, enviar). Con los
+     * mensajes de prueba a la vista no hace nada: sus hilos (1000, 1001…) pueden coincidir con
+     * conversaciones reales, y enviar mandaría un SMS de verdad a un número inventado.
+     */
     fun io(block: suspend () -> Unit) {
+        if (_fake.value != null) return
         scope.launch(Dispatchers.IO) { block() }
     }
 

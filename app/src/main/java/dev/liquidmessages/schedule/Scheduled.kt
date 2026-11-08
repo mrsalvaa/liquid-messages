@@ -57,6 +57,8 @@ object Scheduler {
     }
 
     fun schedule(context: Context, m: ScheduledMessage) {
+        // Con los mensajes de prueba a la vista no se programa nada: saldría un SMS de verdad.
+        if (dev.liquidmessages.data.Repo.inbox.value.fake) return
         Stores.scheduled.update { it + m }
         arm(context, m)
     }
