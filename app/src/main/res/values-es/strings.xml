@@ -261,4 +261,5 @@
     <string name="open_conversation">Abrir conversación</string>
     <string name="close">Cerrar</string>
     <string name="you_to">Vos → %1$s</string>
+    <string name="reactions_label">Reacciones: %1$s</string>
 </resources>

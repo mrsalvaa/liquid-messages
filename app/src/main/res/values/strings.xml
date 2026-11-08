@@ -255,4 +255,5 @@
     <string name="open_conversation">Open conversation</string>
     <string name="close">Close</string>
     <string name="you_to">You → %1$s</string>
+    <string name="reactions_label">Reactions: %1$s</string>
 </resources>

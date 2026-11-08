@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -220,10 +221,12 @@ fun ThreadScreen(
     val group = people.size > 1
     val w = remember(people, book, numbers) { who(people, book, numbers) }
     val messages = remember(inbox, thread) { thread?.let { Conversations.thread(inbox.messages, it) }.orEmpty() }
-    val lines = remember(messages) {
+    // Las reacciones que llegan como SMS ("Le gustó “…”") van sobre su mensaje, no aparte.
+    val applied = remember(messages) { dev.liquidmessages.core.sms.Reactions.apply(messages) }
+    val lines = remember(applied) {
         buildList {
             var day: LocalDate? = null
-            for (m in messages) {
+            for (m in applied.visible) {
                 val d = Dates.day(m.date)
                 if (d != day) {
                     add(Line.Day(d))
@@ -457,8 +460,9 @@ fun ThreadScreen(
                     is Line.Msg -> Bubble(
                         l.m,
                         starred = l.m.id in settings.starred,
+                        reactions = applied.reactions[l.m.id],
                         focused = l.m.id == focused,
-                        BubbleStyle(
+                        style = BubbleStyle(
                             contactColor = if (settings.bubbleColor == 1 && !l.m.box.outgoing) senderColors[l.m.address] else null,
                             fontSize = bubbleFont,
                             timeAlways = settings.timeMode == 0,
@@ -561,6 +565,7 @@ private fun Bubble(
     m: Message,
     starred: Boolean,
     focused: Boolean,
+    reactions: List<String>?,
     style: BubbleStyle,
     sender: String?,
     chipLabel: String?,
@@ -624,6 +629,22 @@ private fun Bubble(
                     }
                 }
             }
+        }
+        if (!reactions.isNullOrEmpty()) {
+            // Cada emoji una vez, con cuántos si son varios: "👍 2 ❤️".
+            val label = reactions.groupingBy { it }.eachCount().entries.joinToString("  ") { (e, n) -> if (n > 1) "$e $n" else e }
+            Text(
+                label,
+                Modifier
+                    .padding(horizontal = 10.dp)
+                    .offset(y = (-6).dp)
+                    .clip(CircleShape)
+                    .background(if (p.solid) p.levels.getOrElse(2) { p.content.copy(alpha = 0.12f) } else p.content.copy(alpha = if (p.dark) 0.18f else 0.10f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                    .semantics { contentDescription = str(R.string.reactions_label, label) },
+                fontSize = 14.sp,
+                color = p.content,
+            )
         }
         if (showMeta) {
             Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
