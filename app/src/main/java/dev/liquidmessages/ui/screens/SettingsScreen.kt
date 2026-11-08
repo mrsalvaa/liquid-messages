@@ -26,6 +26,7 @@ import dev.liquidmessages.data.Repo
 import dev.liquidmessages.data.Stores
 import dev.liquidmessages.security.AppLock
 import androidx.compose.material.icons.rounded.Close
+import dev.liquidmessages.ui.components.Dropdown
 import dev.liquidmessages.ui.components.SwitchRow
 import dev.liquidmessages.ui.glass.GlassCard
 import dev.liquidmessages.ui.glass.LocalGlass
@@ -62,10 +63,8 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             Text(str(R.string.time_shown), Modifier.padding(top = 12.dp), fontSize = 16.sp)
             ChipRow(listOf(0, 1), s.timeMode, { str(if (it == 0) R.string.time_always else R.string.time_on_tap) }) { v -> edit { it.copy(timeMode = v) } }
             SwitchRow(str(R.string.compact_list), s.compactList, { v -> edit { it.copy(compactList = v) } }, Modifier.padding(top = 4.dp), subtitle = str(R.string.compact_list_hint))
-            Text(str(R.string.swipe_right), Modifier.padding(top = 12.dp), fontSize = 16.sp)
-            ChipRow(SwipeAction.entries.map { it.value }, s.swipeRight, { str(SwipeAction.of(it).label) }) { v -> edit { it.copy(swipeRight = v) } }
-            Text(str(R.string.swipe_left), Modifier.padding(top = 12.dp), fontSize = 16.sp)
-            ChipRow(SwipeAction.entries.map { it.value }, s.swipeLeft, { str(SwipeAction.of(it).label) }) { v -> edit { it.copy(swipeLeft = v) } }
+            Dropdown(str(R.string.swipe_right), SwipeAction.entries.map { it.value }, s.swipeRight, { str(SwipeAction.of(it).label) }, Modifier.padding(top = 8.dp)) { v -> edit { it.copy(swipeRight = v) } }
+            Dropdown(str(R.string.swipe_left), SwipeAction.entries.map { it.value }, s.swipeLeft, { str(SwipeAction.of(it).label) }) { v -> edit { it.copy(swipeLeft = v) } }
             Text(str(R.string.swipe_hint), Modifier.padding(top = 4.dp), fontSize = 13.sp, color = p.contentSecondary)
         }
 
@@ -80,8 +79,7 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
                 }) { slot -> edit { it.copy(primarySimSlot = slot) } }
                 Text(str(R.string.primary_sim_hint), fontSize = 13.sp, color = p.contentSecondary)
 
-                Text(str(R.string.sim_policy), Modifier.padding(top = 14.dp), fontSize = 16.sp)
-                ChipRow(SimPolicy.entries, SimPolicy.fromValue(s.simPolicy), { policy ->
+                Dropdown(str(R.string.sim_policy), SimPolicy.entries, SimPolicy.fromValue(s.simPolicy), { policy ->
                     str(
                         when (policy) {
                             SimPolicy.CONVERSATION -> R.string.sim_policy_conversation
@@ -90,7 +88,7 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
                             SimPolicy.SYSTEM_DEFAULT -> R.string.sim_policy_system
                         },
                     )
-                }) { policy -> edit { it.copy(simPolicy = policy.value) } }
+                }, Modifier.padding(top = 8.dp)) { policy -> edit { it.copy(simPolicy = policy.value) } }
                 if (SimPolicy.fromValue(s.simPolicy) == SimPolicy.CONVERSATION) {
                     Text(str(R.string.sim_policy_conversation_hint), fontSize = 13.sp, color = p.contentSecondary)
                 }
@@ -99,8 +97,7 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
 
         SectionLabel(str(R.string.notifications))
         GlassCard {
-            Text(str(R.string.notif_preview), fontSize = 16.sp)
-            ChipRow(listOf(0, 1, 2), s.notifPreview, { str(listOf(R.string.preview_all, R.string.preview_sender, R.string.preview_none)[it]) }) { v -> edit { it.copy(notifPreview = v) } }
+            Dropdown(str(R.string.notif_preview), listOf(0, 1, 2), s.notifPreview, { str(listOf(R.string.preview_all, R.string.preview_sender, R.string.preview_none)[it]) }) { v -> edit { it.copy(notifPreview = v) } }
             Text(str(R.string.notif_preview_hint), fontSize = 13.sp, color = p.contentSecondary)
             SwitchRow(str(R.string.delivery_reports), s.deliveryReports, { v -> edit { it.copy(deliveryReports = v) } }, Modifier.padding(top = 8.dp), subtitle = str(R.string.delivery_reports_hint))
         }
