@@ -278,4 +278,7 @@
     <string name="private_needs_lock">Set up a screen lock on your phone to use private conversations.</string>
     <string name="private_locked">Private conversation</string>
     <string name="unlock">Unlock</string>
+    <string name="no_private">No private conversations</string>
+    <string name="no_private_hint">Long-press a conversation and choose Make private.</string>
+    <string name="no_spam">No possible spam</string>
 </resources>

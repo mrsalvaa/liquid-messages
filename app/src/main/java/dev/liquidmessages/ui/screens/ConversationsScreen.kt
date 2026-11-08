@@ -358,6 +358,8 @@ fun ConversationsScreen(
             item(key = "empty") {
                 when {
                     query.isNotBlank() -> EmptyState(str(R.string.no_results), "")
+                    private -> EmptyState(str(R.string.no_private), str(R.string.no_private_hint))
+                    spam -> EmptyState(str(R.string.no_spam), "")
                     archived -> EmptyState(str(R.string.no_archived), str(R.string.no_archived_hint))
                     else -> EmptyState(str(R.string.no_conversations), str(R.string.no_conversations_hint))
                 }

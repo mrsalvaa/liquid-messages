@@ -284,4 +284,7 @@
     <string name="private_needs_lock">Configurá un bloqueo de pantalla en el celular para usar conversaciones privadas.</string>
     <string name="private_locked">Conversación privada</string>
     <string name="unlock">Desbloquear</string>
+    <string name="no_private">Sin conversaciones privadas</string>
+    <string name="no_private_hint">Mantené apretada una conversación y elegí Hacer privada.</string>
+    <string name="no_spam">Sin posible spam</string>
 </resources>
