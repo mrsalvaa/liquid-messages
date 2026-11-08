@@ -270,4 +270,12 @@
     <string name="code_cleanup_24h">After 24 hours</string>
     <string name="code_cleanup_7d">After 7 days</string>
     <string name="code_cleanup_hint">Only codes already read, and never from contacts or conversations where you wrote. They go to the trash.</string>
+    <string name="private_folder">Private</string>
+    <string name="private_folder_hint">Hidden from the list, search and Starred. Their notifications show neither name nor text. They lock again when you leave the app.</string>
+    <string name="make_private">Make private</string>
+    <string name="make_public">Remove from private</string>
+    <string name="moved_to_private">Moved to Private</string>
+    <string name="private_needs_lock">Set up a screen lock on your phone to use private conversations.</string>
+    <string name="private_locked">Private conversation</string>
+    <string name="unlock">Unlock</string>
 </resources>

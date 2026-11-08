@@ -57,7 +57,13 @@ fun StarredScreen(padding: PaddingValues, onBack: () -> Unit, onOpen: (Message, 
     val context = LocalContext.current
     val p = LocalGlass.current
     val starred = settings.starred
-    val list = remember(inbox, starred) { inbox.messages.filter { it.id in starred }.sortedByDescending { it.date } }
+    // Los de conversaciones privadas no se muestran acá.
+    val hidden = settings.hidden
+    val list = remember(inbox, starred, hidden, numbers) {
+        inbox.messages.filter { m ->
+            m.id in starred && dev.liquidmessages.core.sms.Conversations.key(inbox.participants[m.threadId]?.takeIf { it.isNotEmpty() } ?: listOf(m.address), numbers) !in hidden
+        }.sortedByDescending { it.date }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),

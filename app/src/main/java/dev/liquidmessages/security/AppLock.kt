@@ -36,9 +36,23 @@ object AppLock {
 
     fun enabled(): Boolean = Stores.settings.value.appLock
 
-    /** Al salir de la app (onStop). */
+    private val _privateOpen = MutableStateFlow(false)
+    /** Si las conversaciones privadas están a la vista (se desbloquearon y no se salió de la app). */
+    val privateOpen: StateFlow<Boolean> = _privateOpen.asStateFlow()
+
+    /** Pide desbloquear para ver las conversaciones privadas. */
+    fun openPrivate(activity: ComponentActivity, onResult: (Boolean) -> Unit = {}) {
+        if (_privateOpen.value) return onResult(true)
+        authenticate(activity) { ok ->
+            if (ok) _privateOpen.value = true
+            onResult(ok)
+        }
+    }
+
+    /** Al salir de la app (onStop). Las privadas se cierran enseguida, sin margen. */
     fun left() {
         if (!_locked.value) leftAt = System.currentTimeMillis()
+        _privateOpen.value = false
     }
 
     /** Al volver (onStart): si pasó el margen, se vuelve a pedir. */

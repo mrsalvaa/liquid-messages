@@ -276,4 +276,12 @@
     <string name="code_cleanup_24h">Después de 24 horas</string>
     <string name="code_cleanup_7d">Después de 7 días</string>
     <string name="code_cleanup_hint">Solo los ya leídos, y nunca de contactos ni de conversaciones donde escribiste. Van a la papelera.</string>
+    <string name="private_folder">Privadas</string>
+    <string name="private_folder_hint">No aparecen en la lista, en las búsquedas ni en Destacados. Sus notificaciones no muestran nombre ni texto. Se vuelven a bloquear al salir de la app.</string>
+    <string name="make_private">Hacer privada</string>
+    <string name="make_public">Quitar de privadas</string>
+    <string name="moved_to_private">Movida a Privadas</string>
+    <string name="private_needs_lock">Configurá un bloqueo de pantalla en el celular para usar conversaciones privadas.</string>
+    <string name="private_locked">Conversación privada</string>
+    <string name="unlock">Desbloquear</string>
 </resources>

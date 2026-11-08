@@ -218,6 +218,15 @@ fun ThreadScreen(
         thread?.let { inbox.participants[it]?.takeIf(List<String>::isNotEmpty) }
             ?: addresses.ifEmpty { thread?.let { t -> inbox.messages.firstOrNull { it.threadId == t }?.address?.let(::listOf) } ?: emptyList() }
     }
+    // Una privada (abierta desde una notificación, por ejemplo) pide desbloquear antes de mostrarse.
+    val peopleKey = remember(people, numbers) { Conversations.key(people, numbers) }
+    if (peopleKey in settings.hidden) {
+        val open by dev.liquidmessages.security.AppLock.privateOpen.collectAsStateWithLifecycle()
+        if (!open) {
+            PrivateGate(Modifier.padding(padding)) {}
+            return
+        }
+    }
     val group = people.size > 1
     val w = remember(people, book, numbers) { who(people, book, numbers) }
     val messages = remember(inbox, thread) { thread?.let { Conversations.thread(inbox.messages, it) }.orEmpty() }

@@ -142,7 +142,7 @@ object Notifier {
         val settings = Stores.settings.value
         val channel = if (key in settings.customSound) conversationChannel(context, key, null) else CHANNEL_MESSAGES
         // Con la app bloqueada o la vista previa en "nada": ni quién ni qué, y sin responder.
-        if (settings.appLock || settings.notifPreview == 2) {
+        if (settings.appLock || settings.notifPreview == 2 || key in settings.hidden) {
             nm.notify(
                 threadId.toInt(),
                 Notification.Builder(context, channel)

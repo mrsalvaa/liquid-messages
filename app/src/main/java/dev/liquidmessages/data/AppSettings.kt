@@ -88,6 +88,12 @@ data class AppSettings(
     /** Códigos de verificación leídos van a la papelera pasadas estas horas (0 = nunca). */
     val codeCleanup: Int = 0,
 
+    /**
+     * Conversaciones privadas, por clave: fuera de la lista y de las búsquedas, con notificaciones
+     * sin nombre ni texto; se ven después de desbloquear (huella o PIN del celular).
+     */
+    val hidden: Set<String> = emptySet(),
+
     /** Mensajes destacados, por id (los MMS en negativo, como los lee SystemSms). */
     val starred: Set<Long> = emptySet(),
 

@@ -97,6 +97,7 @@ sealed interface Overlay {
     data object Archived : Overlay
     data object Starred : Overlay
     data object Spam : Overlay
+    data object Private : Overlay
     data object Settings : Overlay
 }
 
@@ -318,6 +319,7 @@ private fun MessagesUi(animated: Boolean) {
                                 onArchived = { push(Overlay.Archived) },
                                 onStarred = { push(Overlay.Starred) },
                                 onSpam = { push(Overlay.Spam) },
+                                onPrivate = { push(Overlay.Private) },
                                 onBack = {},
                             )
                             Overlay.Archived -> ConversationsScreen(
@@ -328,6 +330,17 @@ private fun MessagesUi(animated: Boolean) {
                                 onArchived = {},
                                 onBack = ::pop,
                             )
+                            Overlay.Private -> dev.liquidmessages.ui.screens.PrivateGate {
+                                ConversationsScreen(
+                                    padding,
+                                    archived = false,
+                                    private = true,
+                                    onOpen = { push(Overlay.Thread(it.threadId, it.addresses)) },
+                                    onSettings = {},
+                                    onArchived = {},
+                                    onBack = ::pop,
+                                )
+                            }
                             Overlay.Spam -> ConversationsScreen(
                                 padding,
                                 archived = false,

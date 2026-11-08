@@ -29,6 +29,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.Report
 import androidx.compose.material.icons.rounded.Star
@@ -103,6 +105,9 @@ fun ConversationsScreen(
     onSpam: () -> Unit = {},
     /** La carpeta "Posible spam" (con [archived] en false). */
     spam: Boolean = false,
+    /** Las conversaciones privadas (ya desbloqueadas). */
+    private: Boolean = false,
+    onPrivate: () -> Unit = {},
 ) {
     val inbox by Repo.inbox.collectAsStateWithLifecycle()
     val book by Repo.book.collectAsStateWithLifecycle()
@@ -116,6 +121,7 @@ fun ConversationsScreen(
     val toast = LocalToast.current
     val undoToast = LocalUndoToast.current
     val context = LocalContext.current
+    val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
     val p = LocalGlass.current
     val isDefault by Repo.isDefault.collectAsStateWithLifecycle()
     val tick by Repo.permissionTick.collectAsStateWithLifecycle()
@@ -133,11 +139,11 @@ fun ConversationsScreen(
 
     // Hilos que parecen spam: se calcula aparte (recorre todos los mensajes) y solo cuando cambian.
     val suspicious by produceState(emptySet<Long>(), inbox) { value = withContext(Dispatchers.Default) { dev.liquidmessages.sms.Filters.suspiciousThreads(inbox.messages) } }
-    val rows by produceState<List<ListRow>?>(null, inbox, book, numbers, settings.pinned, settings.archived, settings.muted, query, archived, spam, suspicious, settings.spam, settings.notSpam, settings.spamFilter) {
+    val rows by produceState<List<ListRow>?>(null, inbox, book, numbers, settings.pinned, settings.archived, settings.muted, query, archived, spam, suspicious, settings.spam, settings.notSpam, settings.spamFilter, settings.hidden, private) {
         value = withContext(Dispatchers.Default) {
             fun build(a: Boolean) = Conversations.build(inbox.messages, numbers, prefsOf(settings), { inbox.participants[it] }, a)
             // En "Posible spam" van las archivadas también; en las demás vistas, el spam no aparece.
-            val list = if (spam) build(false) + build(true) else build(archived)
+            val list = if (spam || private) build(false) + build(true) else build(archived)
             val q = Fold.fold(query.trim())
             val digits = query.filter(Char::isDigit)
             if (q.isEmpty()) {
@@ -161,7 +167,11 @@ fun ConversationsScreen(
                     }
                 }.sortedByDescending { it.shown.date }
             }
-        }.filter { r -> dev.liquidmessages.sms.Filters.isSpam(settings, r.c.key, r.c.threadId, r.who.contactId != null, suspicious) == spam }
+        }.filter { r ->
+            // Las privadas solo en su vista; ahí no se separa el spam.
+            if (private) r.c.key in settings.hidden
+            else r.c.key !in settings.hidden && dev.liquidmessages.sms.Filters.isSpam(settings, r.c.key, r.c.threadId, r.who.contactId != null, suspicious) == spam
+        }
     }
 
     fun toggle(get: (AppSettings) -> Set<String>, key: String, put: AppSettings.(Set<String>) -> AppSettings) {
@@ -180,6 +190,15 @@ fun ConversationsScreen(
             })
             add(SheetAction(str(if (c.prefs.muted) R.string.unmute else R.string.mute), if (c.prefs.muted) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff) {
                 toggle({ it.muted }, c.key) { copy(muted = it) }
+            })
+            add(SheetAction(str(if (private) R.string.make_public else R.string.make_private), if (private) Icons.Rounded.LockOpen else Icons.Rounded.Lock) {
+                val a = activity
+                if (!private && (a == null || !dev.liquidmessages.security.AppLock.available(a))) {
+                    toast(str(R.string.private_needs_lock))
+                } else {
+                    Stores.settings.update { s -> if (private) s.copy(hidden = s.hidden - c.key) else s.copy(hidden = s.hidden + c.key) }
+                    toast(str(if (private) R.string.moved_to_inbox else R.string.moved_to_private))
+                }
             })
             // Spam: lo marcado a mano manda sobre el filtro.
             add(SheetAction(str(if (spam) R.string.not_spam else R.string.mark_spam), if (spam) Icons.Rounded.Inbox else Icons.Rounded.Report) {
@@ -259,7 +278,12 @@ fun ConversationsScreen(
         ),
     ) {
         item(key = "title") {
-            if (spam) {
+            if (private) {
+                Column {
+                    BackTitle(str(R.string.private_folder), onBack, Modifier.padding(horizontal = 4.dp))
+                    Text(str(R.string.private_folder_hint), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 13.sp, color = p.contentSecondary)
+                }
+            } else if (spam) {
                 Column {
                     BackTitle(str(R.string.spam_folder), onBack, Modifier.padding(horizontal = 4.dp))
                     Text(str(R.string.spam_folder_hint), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 13.sp, color = p.contentSecondary)
@@ -284,6 +308,11 @@ fun ConversationsScreen(
                                         SheetAction(str(R.string.archived), Icons.Rounded.Archive, onClick = onArchived),
                                         SheetAction(str(R.string.starred), Icons.Rounded.Star, onClick = onStarred),
                                         SheetAction(str(R.string.spam_folder), Icons.Rounded.Report, onClick = onSpam),
+                                        SheetAction(str(R.string.private_folder), Icons.Rounded.Lock) {
+                                            val a = activity
+                                            if (a == null || !dev.liquidmessages.security.AppLock.available(a)) toast(str(R.string.private_needs_lock))
+                                            else dev.liquidmessages.security.AppLock.openPrivate(a) { ok -> if (ok) onPrivate() }
+                                        },
                                     ),
                                 ),
                             )
