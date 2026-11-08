@@ -32,7 +32,9 @@ class Backup(context: Context) {
 
     /** Escribe todos los SMS y MMS. [progress] recibe cuántos lleva. Devuelve cuántos de cada uno. */
     fun export(out: OutputStream, progress: (Int) -> Unit = {}): Result {
-        val total = count(Telephony.Sms.CONTENT_URI) + count(Telephony.Mms.CONTENT_URI)
+        // Los avisos de MMS sin bajar no se exportan (no tienen contenido): no cuentan.
+        val total = count(Telephony.Sms.CONTENT_URI) +
+            (resolver.query(Telephony.Mms.CONTENT_URI, arrayOf("_id"), "${Telephony.Mms.MESSAGE_TYPE} != ${PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND}", null, null)?.use { it.count } ?: 0)
         val x = Xml.newSerializer()
         x.setOutput(out, "UTF-8")
         x.startDocument("UTF-8", true)
@@ -165,20 +167,35 @@ class Backup(context: Context) {
 
     private fun tail(a: String) = a.filter { it.isDigit() }.takeLast(8).ifEmpty { a.trim().lowercase() }
 
-    /** Lo que ya hay, para no duplicar: SMS por fecha, tipo, número y texto; MMS por fecha (en segundos), caja y texto. */
+    /**
+     * Lo que ya hay, para no duplicar: SMS por fecha, tipo, número y texto; MMS por fecha (en
+     * segundos), caja, texto y tipos de sus partes (dos MMS del mismo segundo no se confunden).
+     */
     private fun existing(): Pair<HashSet<String>, HashSet<String>> {
         val sms = HashSet<String>()
         resolver.query(Telephony.Sms.CONTENT_URI, arrayOf(Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.ADDRESS, Telephony.Sms.BODY), null, null, null)?.use { c ->
             while (c.moveToNext()) sms += smsKey(c.getLong(0), c.getInt(1), c.getString(2).orEmpty(), c.getString(3).orEmpty())
         }
         val mms = HashSet<String>()
-        resolver.query(Telephony.Mms.CONTENT_URI, arrayOf(Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX), null, null, null)?.use { c ->
-            while (c.moveToNext()) mms += "${c.getLong(0)}|${c.getInt(1)}"
+        resolver.query(Telephony.Mms.CONTENT_URI, arrayOf(Telephony.Mms._ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX), null, null, null)?.use { c ->
+            while (c.moveToNext()) {
+                val parts = ArrayList<Pair<String, String?>>()
+                resolver.query(Uri.parse("content://mms/${c.getLong(0)}/part"), arrayOf(Telephony.Mms.Part.CONTENT_TYPE, Telephony.Mms.Part.TEXT), null, null, Telephony.Mms.Part.SEQ)?.use { p ->
+                    while (p.moveToNext()) parts += p.getString(0).orEmpty() to p.getString(1)
+                }
+                mms += mmsKey(c.getLong(1), c.getInt(2), parts)
+            }
         }
         return sms to mms
     }
 
     private fun smsKey(date: Long, type: Int, address: String, body: String) = "$date|$type|${tail(address)}|${body.hashCode()}"
+
+    private fun mmsKey(seconds: Long, box: Int, parts: List<Pair<String, String?>>): String {
+        val media = parts.map { it.first.lowercase() }.filter { it != "application/smil" && it != "text/plain" }.sorted()
+        val text = parts.filter { it.first.equals("text/plain", true) }.mapNotNull { it.second }.joinToString("\n")
+        return "$seconds|$box|${text.hashCode()}|$media"
+    }
 
     /** Lee un respaldo y guarda lo que falta. [progress] recibe cuántos lleva. */
     fun import(input: InputStream, progress: (Int) -> Unit = {}): Result {
@@ -262,7 +279,7 @@ class Backup(context: Context) {
         val raw = a["date"]?.toLongOrNull() ?: return false
         val seconds = if (raw > 100_000_000_000L) raw / 1000 else raw
         val box = a["msg_box"]?.toIntOrNull() ?: Telephony.Mms.MESSAGE_BOX_INBOX
-        if (!have.add("$seconds|$box")) return null
+        if (!have.add(mmsKey(seconds, box, parts.map { (it["ct"] ?: "") to it["text"] }))) return null
         val people = a["address"].orEmpty().split('~').map { it.trim() }.filter { it.isNotEmpty() && it != "insert-address-token" }
             .ifEmpty { addrs.mapNotNull { it["address"] }.filter { it != "insert-address-token" } }
         if (people.isEmpty()) return false

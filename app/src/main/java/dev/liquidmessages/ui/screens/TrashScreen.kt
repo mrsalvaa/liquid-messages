@@ -84,7 +84,8 @@ fun TrashScreen(padding: PaddingValues, onBack: () -> Unit) {
         if (list != null && list.isEmpty()) item(key = "empty") { EmptyState(str(R.string.trash_none), str(R.string.trash_hint)) }
         items(list.orEmpty(), key = { it.id }) { e ->
             val title = who(e.participants.ifEmpty { e.messages.map { it.address }.distinct() }, book, numbers).title
-            val left = ((Trash.DAYS_30 - (System.currentTimeMillis() - e.deletedAt)) / 86_400_000L).coerceAtLeast(0).toInt()
+            // Hacia arriba: recién borrado son 30 días, no 29.
+            val left = ((Trash.DAYS_30 - (System.currentTimeMillis() - e.deletedAt) + 86_399_999L) / 86_400_000L).coerceIn(0, 30).toInt()
             ContactRow(
                 title,
                 onClick = {

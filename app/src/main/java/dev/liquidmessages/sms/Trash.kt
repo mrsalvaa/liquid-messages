@@ -39,6 +39,9 @@ data class TrashMessage(
     val subscriptionId: Int? = null,
     val subject: String? = null,
     val messageType: Int = 0,
+    /** MMS sin bajar: de dónde se baja y su transacción, para que "Descargar" siga andando al restaurar. */
+    val contentLocation: String? = null,
+    val transactionId: String? = null,
     val to: List<String> = emptyList(),
     val parts: List<TrashPart> = emptyList(),
 )
@@ -156,7 +159,7 @@ class Trash(context: Context) {
     private fun copyMms(id: Long, folder: File): TrashMessage? {
         val head = resolver.query(
             ContentUris.withAppendedId(Telephony.Mms.CONTENT_URI, id),
-            arrayOf(Telephony.Mms.DATE, Telephony.Mms.DATE_SENT, Telephony.Mms.MESSAGE_BOX, Telephony.Mms.READ, Telephony.Mms.SUBSCRIPTION_ID, Telephony.Mms.SUBJECT, Telephony.Mms.MESSAGE_TYPE),
+            arrayOf(Telephony.Mms.DATE, Telephony.Mms.DATE_SENT, Telephony.Mms.MESSAGE_BOX, Telephony.Mms.READ, Telephony.Mms.SUBSCRIPTION_ID, Telephony.Mms.SUBJECT, Telephony.Mms.MESSAGE_TYPE, Telephony.Mms.CONTENT_LOCATION, Telephony.Mms.TRANSACTION_ID),
             null,
             null,
             null,
@@ -165,6 +168,7 @@ class Trash(context: Context) {
             else TrashMessage(
                 mms = true, address = "", date = c.getLong(0) * 1000, dateSent = c.getLong(1), box = c.getInt(2), read = c.getInt(3) != 0,
                 subscriptionId = if (c.isNull(4)) null else c.getInt(4).takeIf { it >= 0 }, subject = c.getString(5), messageType = c.getInt(6),
+                contentLocation = c.getString(7), transactionId = c.getString(8),
             )
         } ?: return null
         var from = ""
@@ -250,6 +254,8 @@ class Trash(context: Context) {
                 put(Telephony.Mms.MESSAGE_TYPE, m.messageType.takeIf { it != 0 } ?: PduHeaders.MESSAGE_TYPE_RETRIEVE_CONF)
                 m.subject?.let { put(Telephony.Mms.SUBJECT, it) }
                 m.subscriptionId?.let { put(Telephony.Mms.SUBSCRIPTION_ID, it) }
+                m.contentLocation?.let { put(Telephony.Mms.CONTENT_LOCATION, it) }
+                m.transactionId?.let { put(Telephony.Mms.TRANSACTION_ID, it) }
             },
         ) ?: return false
         val id = ContentUris.parseId(row)
