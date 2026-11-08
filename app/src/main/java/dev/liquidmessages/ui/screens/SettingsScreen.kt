@@ -3,6 +3,9 @@ package dev.liquidmessages.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -42,6 +45,7 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
     val p = LocalGlass.current
     val edit: ((AppSettings) -> AppSettings) -> Unit = { Stores.settings.update(it) }
 
+    androidx.compose.runtime.CompositionLocalProvider(dev.liquidmessages.ui.glass.LocalFlatGlass provides true) {
     Column(
         Modifier
             .fillMaxSize()
@@ -56,12 +60,11 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
 
         SectionLabel(str(R.string.look))
         GlassCard {
-            Text(str(R.string.bubble_color), fontSize = 16.sp)
-            ChipRow(listOf(0, 1), s.bubbleColor, { str(if (it == 0) R.string.bubble_gray else R.string.bubble_contact) }) { v -> edit { it.copy(bubbleColor = v) } }
-            Text(str(R.string.text_size), Modifier.padding(top = 12.dp), fontSize = 16.sp)
-            ChipRow(listOf(0, 1, 2), s.textSize, { str(listOf(R.string.size_small, R.string.size_normal, R.string.size_large)[it]) }) { v -> edit { it.copy(textSize = v) } }
-            Text(str(R.string.time_shown), Modifier.padding(top = 12.dp), fontSize = 16.sp)
-            ChipRow(listOf(0, 1), s.timeMode, { str(if (it == 0) R.string.time_always else R.string.time_on_tap) }) { v -> edit { it.copy(timeMode = v) } }
+            // Desplegables y no chips: cada chip es una superficie de cristal que se recalcula en cada
+            // cuadro al desplazar, y con muchos los Ajustes se trababan (medido en DESIGN.md).
+            Dropdown(str(R.string.bubble_color), listOf(0, 1), s.bubbleColor, { str(if (it == 0) R.string.bubble_gray else R.string.bubble_contact) }) { v -> edit { it.copy(bubbleColor = v) } }
+            Dropdown(str(R.string.text_size), listOf(0, 1, 2), s.textSize, { str(listOf(R.string.size_small, R.string.size_normal, R.string.size_large)[it]) }) { v -> edit { it.copy(textSize = v) } }
+            Dropdown(str(R.string.time_shown), listOf(0, 1), s.timeMode, { str(if (it == 0) R.string.time_always else R.string.time_on_tap) }) { v -> edit { it.copy(timeMode = v) } }
             SwitchRow(str(R.string.compact_list), s.compactList, { v -> edit { it.copy(compactList = v) } }, Modifier.padding(top = 4.dp), subtitle = str(R.string.compact_list_hint))
             Dropdown(str(R.string.swipe_right), SwipeAction.entries.map { it.value }, s.swipeRight, { str(SwipeAction.of(it).label) }, Modifier.padding(top = 8.dp)) { v -> edit { it.copy(swipeRight = v) } }
             Dropdown(str(R.string.swipe_left), SwipeAction.entries.map { it.value }, s.swipeLeft, { str(SwipeAction.of(it).label) }) { v -> edit { it.copy(swipeLeft = v) } }
@@ -72,8 +75,7 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
         if (sims.multiple) {
             SectionLabel(str(R.string.sims))
             GlassCard {
-                Text(str(R.string.primary_sim), fontSize = 16.sp)
-                ChipRow(sims.chips.map { it.slotIndex }.filter { it in 0..1 }, s.primarySimSlot, { slot ->
+                Dropdown(str(R.string.primary_sim), sims.chips.map { it.slotIndex }.filter { it in 0..1 }, s.primarySimSlot, { slot ->
                     val chip = sims.chips.firstOrNull { it.slotIndex == slot }
                     if (chip != null && chip.displayName.isNotBlank()) str(R.string.sim_label_named, slot + 1, chip.displayName) else str(R.string.sim_label, slot + 1)
                 }) { slot -> edit { it.copy(primarySimSlot = slot) } }
@@ -102,7 +104,9 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             SwitchRow(str(R.string.delivery_reports), s.deliveryReports, { v -> edit { it.copy(deliveryReports = v) } }, Modifier.padding(top = 8.dp), subtitle = str(R.string.delivery_reports_hint))
         }
 
-        SectionLabel(str(R.string.security))
+        // Bloqueo, bloqueados y papelera en una sola tarjeta: con "En movimiento" cada tarjeta
+        // de cristal cuesta al desplazar, y tarjetas de una fila no aportan nada.
+        SectionLabel(str(R.string.privacy))
         GlassCard {
             val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
             val toast = LocalToast.current
@@ -120,6 +124,9 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
                     }
                 }
             }, subtitle = str(R.string.app_lock_hint))
+            // La lista de bloqueados del sistema solo la puede ver la app de SMS o de teléfono predeterminada.
+            if (isDefault) SettingRow(str(R.string.blocked_numbers), onClick = onBlocked)
+            SettingRow(str(R.string.trash), subtitle = str(R.string.trash_hint), onClick = onTrash)
         }
 
         SectionLabel(str(R.string.writing))
@@ -128,9 +135,14 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             Text(str(R.string.quick_replies), fontSize = 16.sp)
             s.quickReplies.forEach { r ->
                 SettingRow(r, trailing = {
-                    dev.liquidmessages.ui.glass.GlassIconButton(androidx.compose.material.icons.Icons.Rounded.Close, str(R.string.remove_quick_reply), {
-                        edit { it.copy(quickReplies = it.quickReplies - r) }
-                    }, size = 40.dp)
+                    // Ícono plano (sin cristal), con 48 dp para tocarlo.
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .clickable(onClickLabel = str(R.string.remove_quick_reply)) { edit { it.copy(quickReplies = it.quickReplies - r) } },
+                        contentAlignment = androidx.compose.ui.Alignment.Center,
+                    ) {
+                        androidx.compose.material3.Icon(dev.liquidmessages.ui.glass.styled(androidx.compose.material.icons.Icons.Rounded.Close), str(R.string.remove_quick_reply), tint = p.contentSecondary)
+                    }
                 })
             }
             SettingRow(str(R.string.add_quick_reply), onClick = {
@@ -142,22 +154,14 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
             SwitchRow(str(R.string.simplify_accents), s.simplifyAccents, { v -> edit { it.copy(simplifyAccents = v) } }, subtitle = str(R.string.simplify_accents_hint))
         }
 
-        // La lista de bloqueados del sistema solo la puede ver la app de SMS o de teléfono predeterminada.
-        if (isDefault) {
-            SectionLabel(str(R.string.block))
-            GlassCard { SettingRow(str(R.string.blocked_numbers), onClick = onBlocked) }
-        }
-
         SectionLabel(str(R.string.backup))
         BackupCard(isDefault)
-
-        SectionLabel(str(R.string.trash))
-        GlassCard { SettingRow(str(R.string.trash), subtitle = str(R.string.trash_hint), onClick = onTrash) }
 
         SectionLabel(str(R.string.about))
         GlassCard {
             Text(str(R.string.version, BuildConfig.VERSION_NAME), fontSize = 15.sp, color = p.contentSecondary)
         }
+    }
     }
 }
 

@@ -42,6 +42,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -381,15 +382,24 @@ private fun SwipeRow(
             scope.launch { state.reset() }
         },
         backgroundContent = {
-            val toRight = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
+            // Solo mientras la fila está corrida: en reposo (o volviendo) no se dibuja nada, porque la
+            // fila es transparente y el ícono quedaría a la vista.
+            val direction = state.dismissDirection
+            if (direction == androidx.compose.material3.SwipeToDismissBoxValue.Settled) return@SwipeToDismissBox
+            val toRight = direction == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
             val action = (if (toRight) right else left) ?: return@SwipeToDismissBox
             val icon = when {
                 action == SwipeAction.ARCHIVE && archivedView -> Icons.Rounded.Unarchive
                 else -> action.icon
             }
             val color = if (action == SwipeAction.DELETE) p.dangerText else p.accentFg
+            // Aparece a medida que se desliza y se apaga al volver la fila. El corrimiento se lee al
+            // dibujar, no al componer: así no se recompone la fila en cada cuadro del gesto.
             androidx.compose.foundation.layout.Box(
-                Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                Modifier.fillMaxSize().padding(horizontal = 24.dp).graphicsLayer {
+                    val shown = kotlin.math.abs(runCatching { state.requireOffset() }.getOrDefault(0f))
+                    alpha = (shown / (56.dp.toPx())).coerceIn(0f, 1f)
+                },
                 contentAlignment = if (toRight) androidx.compose.ui.Alignment.CenterStart else androidx.compose.ui.Alignment.CenterEnd,
             ) {
                 androidx.compose.material3.Icon(dev.liquidmessages.ui.glass.styled(icon), null, tint = color)

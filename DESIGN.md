@@ -192,3 +192,7 @@ Con el fondo "En movimiento", las manchas avanzan 15 veces por segundo y cada pa
 Medido en el S24 FE con la build `profile`, 500 conversaciones inventadas en memoria y fondo en movimiento, 12 deslizamientos: lista 1,7 % de cuadros lentos (antes 2,1–2,3 %), conversación larga 2,5–2,8 %, mediana 7–8 ms. En reposo el fondo en movimiento sigue dibujando 15 cuadros por segundo (como en el resto de la suite); con "Liso" no dibuja nada.
 
 Además: los formateadores de fecha se arman una vez por idioma (antes en cada fila y cada cuadro), y en una conversación el nombre y el color de cada remitente se calculan una vez.
+
+### Ajustes sin desenfoque por tarjeta (excepción local)
+
+Con el fondo "En movimiento", cada tarjeta de cristal a medio salir de la pantalla cambia el tamaño de sus capas de desenfoque y refracción en cada cuadro, y la GPU pide memoria nueva unas 47 veces por cuadro (traza atrace en el S24 FE). Ajustes usa `LocalFlatGlass` (en `ui/glass/Components.kt`): las tarjetas se dibujan con el tinte y el brillo, sin efectos, como con el fondo liso. Además, las opciones con chips pasaron a desplegables y bloqueo, bloqueados y papelera quedaron en una sola tarjeta ("Privacidad"). Con la build `profile`, 12 deslizamientos: antes 38,8 % de cuadros lentos (mediana 29 ms), después 2,9–3,2 % (mediana 10 ms), igual que Contacts.

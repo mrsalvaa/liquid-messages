@@ -153,7 +153,7 @@ fun GlassSurface(
     // mismo que no hacerlo, así que las superficies del contenido se dibujan sin efectos (mucho
     // menos trabajo para la GPU) con el mismo aspecto. Lo que flota encima sí refracta, porque
     // debajo pasa el contenido. "En movimiento" conserva todos los efectos.
-    if ((p.blobs.isEmpty() || p.accentGlow) && !LocalFloating.current) {
+    if ((p.blobs.isEmpty() || p.accentGlow || LocalFlatGlass.current) && !LocalFloating.current) {
         Box(
             modifier
                 .graphicsLayer {
@@ -242,6 +242,14 @@ fun GlassSurface(
     }
     }
 }
+
+/**
+ * Excepción local a ui/glass (Mensajes): superficies de contenido sin desenfoque ni refracción
+ * aunque el fondo esté "En movimiento". Para pantallas largas de tarjetas grandes (Ajustes): al
+ * desplazar, cada tarjeta a medio salir de la pantalla cambia el tamaño de sus capas de efecto y
+ * la GPU tiene que pedir memoria nueva en cada cuadro (ver DESIGN.md).
+ */
+val LocalFlatGlass = staticCompositionLocalOf { false }
 
 /** Nivel de anidamiento en el estilo sólido: cada superficie dentro de otra va un tono más allá. */
 private val LocalSolidLevel = staticCompositionLocalOf { 0 }

@@ -134,6 +134,7 @@
     <string name="lock_prompt_title">Unlock Messages</string>
     <string name="lock_title">Messages is locked</string>
     <string name="lock_unlock">Unlock</string>
+    <string name="privacy">Privacy</string>
     <string name="security">Security</string>
     <string name="app_lock">Lock with fingerprint or PIN</string>
     <string name="app_lock_hint">Asks for the phone\'s unlock when opening the app or coming back after 30 seconds. Notifications then only say "New message", without replying.</string>
