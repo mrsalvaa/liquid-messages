@@ -96,6 +96,7 @@ fun ConversationsScreen(
     val book by Repo.book.collectAsStateWithLifecycle()
     val numbers by Repo.numbers.collectAsStateWithLifecycle()
     val settings by Stores.settings.state.collectAsStateWithLifecycle()
+    val drafts by Stores.drafts.state.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var selected by rememberSaveable { mutableStateOf(setOf<Long>()) }
     val sheet = LocalActionSheet.current
@@ -317,6 +318,7 @@ fun ConversationsScreen(
                     shown = r.shown,
                     compact = settings.compactList,
                     selected = if (selected.isEmpty()) null else id in selected,
+                    draft = drafts[r.c.key],
                 )
             }
         }

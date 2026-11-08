@@ -126,6 +126,8 @@ fun ConversationRow(
     compact: Boolean = false,
     /** null = la lista no está seleccionando. */
     selected: Boolean? = null,
+    /** Lo escrito y no enviado en esta conversación, si hay. */
+    draft: String? = null,
 ) {
     val p = LocalGlass.current
     val unread = c.unread > 0
@@ -184,7 +186,16 @@ fun ConversationRow(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (failed) Icon(styled(Icons.Rounded.ErrorOutline), null, Modifier.size(16.dp), tint = p.dangerText)
                 Text(
-                    if (failed) str(R.string.failed) + " · " + line else line,
+                    when {
+                        draft != null -> androidx.compose.ui.text.buildAnnotatedString {
+                            pushStyle(androidx.compose.ui.text.SpanStyle(color = p.dangerText, fontWeight = FontWeight.Medium))
+                            append(str(R.string.draft_label))
+                            pop()
+                            append(" " + draft.replace('\n', ' '))
+                        }
+                        failed -> androidx.compose.ui.text.AnnotatedString(str(R.string.failed) + " · " + line)
+                        else -> androidx.compose.ui.text.AnnotatedString(line)
+                    },
                     Modifier.weight(1f),
                     fontSize = 15.sp,
                     color = if (unread) p.content else p.contentSecondary,

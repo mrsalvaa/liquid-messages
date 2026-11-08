@@ -197,4 +197,5 @@
     <string name="bar_read">Read</string>
     <string name="more">More</string>
     <string name="delete_conversations_title">Delete %1$d conversations?</string>
+    <string name="draft_label">Draft:</string>
 </resources>

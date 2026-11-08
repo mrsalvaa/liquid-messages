@@ -50,12 +50,23 @@ class JsonStore<T>(
 object Stores {
     lateinit var settings: JsonStore<AppSettings>
 
+    /**
+     * Borradores: lo escrito y no enviado, por clave de conversación (Conversations.key). Viven en
+     * la app (files/drafts.json), no en el proveedor del sistema: ninguna otra app los ve.
+     */
+    lateinit var drafts: JsonStore<Map<String, String>>
+
     private var initialized = false
 
     @Synchronized
     fun init(context: Context) {
         if (initialized) return
         settings = JsonStore(File(context.filesDir, "settings.json"), AppSettings.serializer(), AppSettings())
+        drafts = JsonStore(
+            File(context.filesDir, "drafts.json"),
+            kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.builtins.serializer<String>(), kotlinx.serialization.builtins.serializer<String>()),
+            emptyMap(),
+        )
         initialized = true
     }
 }

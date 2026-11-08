@@ -121,6 +121,13 @@ private sealed interface Line {
     data class Msg(val m: Message, val code: String?) : Line
 }
 
+/** Guarda o borra el borrador de una conversación (vacío = sin borrador). */
+private fun saveDraft(key: String, text: String) {
+    val t = text.trim()
+    if (key.isEmpty() || Stores.drafts.value[key].orEmpty() == t) return
+    Stores.drafts.update { if (t.isEmpty()) it - key else it + (key to t) }
+}
+
 /** Cómo se ven las burbujas, según Ajustes. */
 private class BubbleStyle(val contactColor: androidx.compose.ui.graphics.Color?, val fontSize: androidx.compose.ui.unit.TextUnit, val timeAlways: Boolean)
 
@@ -325,6 +332,7 @@ fun ThreadScreen(
 
         if (canReply) {
             Composer(
+                draftKey = Conversations.key(people, numbers),
                 initialText = initialText,
                 initialImage = initialImage,
                 simplify = settings.simplifyAccents,
@@ -479,6 +487,7 @@ private fun AttachmentView(a: Attachment, fg: androidx.compose.ui.graphics.Color
  */
 @Composable
 private fun Composer(
+    draftKey: String,
     initialText: String,
     initialImage: Uri?,
     simplify: Boolean,
@@ -495,7 +504,14 @@ private fun Composer(
     val sheet = LocalActionSheet.current
     val toast = LocalToast.current
     val scope = rememberCoroutineScope()
-    var text by rememberSaveable { mutableStateOf(initialText) }
+    // Lo que llega de otra app manda; si no, el borrador guardado de esta conversación.
+    var text by rememberSaveable { mutableStateOf(initialText.ifEmpty { Stores.drafts.value[draftKey].orEmpty() }) }
+    // El borrador se guarda medio segundo después de dejar de escribir y al salir de la conversación.
+    LaunchedEffect(text) {
+        kotlinx.coroutines.delay(500)
+        saveDraft(draftKey, text)
+    }
+    androidx.compose.runtime.DisposableEffect(draftKey) { onDispose { saveDraft(draftKey, text) } }
     var slot by rememberSaveable { mutableStateOf<Int?>(null) }
     var pick by remember { mutableStateOf<Picked?>(null) }
     val target = slot?.let { SendTarget.Slot(it) } ?: SendTarget.UsePolicy

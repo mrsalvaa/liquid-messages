@@ -203,4 +203,5 @@
     <string name="bar_read">Leídas</string>
     <string name="more">Más</string>
     <string name="delete_conversations_title">¿Borrar %1$d conversaciones?</string>
+    <string name="draft_label">Borrador:</string>
 </resources>
