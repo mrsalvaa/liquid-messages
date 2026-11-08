@@ -148,3 +148,28 @@ Al terminar se borró todo desde la app, se devolvió el rol de SMS a la app del
 | Responder con un mensaje al rechazar una llamada | Necesita una llamada | Rechazar una llamada real con mensaje |
 | Fluidez | El emulador usa GPU por software | Build `profile` en el celu |
 | Grupos con el número propio sin MMS individuales previos | Depende de los mensajes que haya | Recibir un MMS de grupo |
+
+## Etapa 4: bloqueo, papelera y respaldo
+
+Copiar códigos ya estaba desde la etapa 2 (menú del mensaje y notificación).
+
+- **Bloqueo de la app** (`security/AppLock.kt`): `BiometricPrompt` del sistema con huella, cara o PIN (`BIOMETRIC_WEAK or DEVICE_CREDENTIAL`), sin librerías nuevas; suma `USE_BIOMETRIC`, un permiso común. Pide al abrir y al volver después de 30 s. Activarlo o desactivarlo también pide desbloquear, y solo se puede si el celular tiene bloqueo de pantalla. Con el bloqueo, las notificaciones dicen solo "Mensaje nuevo", sin quién, qué ni Responder (que saltearía el bloqueo), y la vista previa de recientes no muestra la app (Android 13+).
+- **Papelera** (`sms/Trash.kt`): borrar guarda primero una copia en `files/trash.json` y, de los MMS, sus adjuntos en `files/trash/ID/`; recién después borra del sistema. Si la copia falla, no se borra nada. Restaurar (solo siendo la predeterminada) devuelve los mensajes a su conversación, con el lugar de descarga de un MMS sin bajar. Lo vencido se borra al abrir la app.
+- **Respaldo** (`sms/Backup.kt`): formato XML de "SMS Backup & Restore", con los adjuntos en base64. El archivo se elige con el selector del sistema (sin permiso de almacenamiento). Exportar escribe a medida que lee; los avisos de MMS sin bajar no se exportan. Importar (solo siendo la predeterminada) saltea lo que ya está: SMS por fecha, tipo, número y texto; MMS por fecha en segundos, caja, texto y tipos de adjuntos.
+
+Permisos finales: los ocho de las etapas 2 y 3 más `USE_BIOMETRIC`.
+
+### Qué se probó (emulador)
+
+| Prueba | Resultado |
+|---|---|
+| Borrar una conversación con un MMS con foto y un aviso sin bajar | Va a la papelera ("2 mensajes · quedan 30 días") |
+| Restaurar | Vuelven la foto con su texto y el aviso con "Descargar" |
+| Exportar | 3 SMS y 2 MMS, la foto en base64 |
+| Importar el mismo archivo encima | 0 nuevos, 5 ya estaban |
+| Borrar, vaciar la papelera e importar | Vuelven los 2 SMS y el MMS con la foto y su fecha original |
+| Bloqueo con PIN de prueba | Activar pide el PIN; un SMS con la app bloqueada no muestra su texto en ninguna notificación; al volver después de 30 s, el pedido de PIN y detrás solo "Mensajes está bloqueada" |
+
+**Arreglado al probar:** dos MMS del mismo segundo se confundían al importar (se perdía uno); el encabezado del respaldo contaba los avisos sin bajar; la papelera perdía el lugar de descarga de un MMS sin bajar; recién borrado decía "quedan 29 días".
+
+Al terminar se borró todo desde la app, se sacó el PIN de prueba, se devolvió el rol de SMS a la app del emulador, se borró el archivo exportado, se desinstaló la build y se apagó el emulador. **Sin probar:** la huella (el emulador se probó con PIN) y un respaldo real de otra app.
