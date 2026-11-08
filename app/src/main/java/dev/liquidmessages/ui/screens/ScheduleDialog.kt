@@ -55,7 +55,13 @@ fun ScheduleContent(onPick: (Long) -> Unit, onCancel: () -> Unit) {
     var hour by remember { mutableIntStateOf((now.hour + 1) % 24) }
     var minute by remember { mutableIntStateOf(0) }
     val days = (0..6).map { LocalDate.now(zone).plusDays(it.toLong()) }
-    ChipRow((0..6).toList(), day, { i -> Dates.header(days[i]).substringBefore(' ').let { if (i < 2) Dates.header(days[i]) else it + " " + days[i].dayOfMonth } }) { day = it }
+    ChipRow((0..6).toList(), day, { i ->
+        when (i) {
+            0 -> str(R.string.today)
+            1 -> str(R.string.tomorrow)
+            else -> Dates.header(days[i]).substringBefore(' ') + " " + days[i].dayOfMonth
+        }
+    }) { day = it }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         WheelPicker(24, hour, { hour = it }, visibleItems = 3, fontSize = 30, width = 72.dp, itemHeight = 44.dp)
         WheelColon(fontSize = 30)

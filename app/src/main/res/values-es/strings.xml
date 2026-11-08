@@ -229,4 +229,5 @@
     <string name="delivery_reports_hint">Muestra \"Entregado\" debajo de cada SMS cuando llega. Algunos operadores lo cobran.</string>
     <string name="delivered">Entregado</string>
     <string name="conversation_sound">Sonido de esta conversación</string>
+    <string name="tomorrow">Mañana</string>
 </resources>

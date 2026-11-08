@@ -69,6 +69,7 @@ import dev.liquidmessages.ui.glass.SheetAction
 import dev.liquidmessages.ui.glass.SheetSpec
 import dev.liquidmessages.util.str
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Una fila ya armada: la conversación, a quién es y qué mensaje mostrar. */
@@ -364,21 +365,21 @@ private fun SwipeRow(
         return
     }
     val p = LocalGlass.current
-    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
+    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(positionalThreshold = { it * 0.33f })
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.material3.SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = right != null,
+        enableDismissFromEndToStart = left != null,
+        // Al soltar pasado el umbral: se hace la acción y la fila vuelve (si la acción la saca, se va con ella).
+        onDismiss = { value ->
             when (value) {
                 androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd -> right?.let(onSwipe)
                 androidx.compose.material3.SwipeToDismissBoxValue.EndToStart -> left?.let(onSwipe)
                 else -> Unit
             }
-            false // La fila vuelve a su lugar; si la acción la saca, la lista ya no la tiene.
+            scope.launch { state.reset() }
         },
-        positionalThreshold = { it * 0.33f },
-    )
-    androidx.compose.material3.SwipeToDismissBox(
-        state = state,
-        enableDismissFromStartToEnd = right != null,
-        enableDismissFromEndToStart = left != null,
         backgroundContent = {
             val toRight = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
             val action = (if (toRight) right else left) ?: return@SwipeToDismissBox

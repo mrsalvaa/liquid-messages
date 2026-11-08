@@ -223,4 +223,5 @@
     <string name="delivery_reports_hint">Shows \"Delivered\" under each SMS when it arrives. Some carriers charge for it.</string>
     <string name="delivered">Delivered</string>
     <string name="conversation_sound">Sound for this conversation</string>
+    <string name="tomorrow">Tomorrow</string>
 </resources>
