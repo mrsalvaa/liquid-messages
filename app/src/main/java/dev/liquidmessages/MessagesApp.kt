@@ -14,5 +14,7 @@ class MessagesApp : Application() {
         Stores.init(this)
         Repo.init(this)
         Notifier.channels(this)
+        // Las alarmas de los programados se pierden si se fuerza el cierre de la app: se vuelven a poner.
+        dev.liquidmessages.schedule.Scheduler.rearmAll(this)
     }
 }

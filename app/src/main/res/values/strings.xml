@@ -174,7 +174,7 @@
     <string name="look">Conversations</string>
     <string name="bubble_color">Received bubbles</string>
     <string name="bubble_gray">Gray</string>
-    <string name="bubble_contact">Contact's color</string>
+    <string name="bubble_contact">Contact\'s color</string>
     <string name="text_size">Text size</string>
     <string name="size_small">Small</string>
     <string name="size_normal">Normal</string>
@@ -202,4 +202,15 @@
     <string name="add_quick_reply">Add a quick reply</string>
     <string name="remove_quick_reply">Remove</string>
     <string name="quick_reply_hint">Text of the reply</string>
+    <string name="schedule">Schedule</string>
+    <string name="schedule_in_hour">In an hour</string>
+    <string name="schedule_tonight">Tonight</string>
+    <string name="schedule_tomorrow_morning">Tomorrow morning</string>
+    <string name="schedule_other">Or choose day and time</string>
+    <string name="schedule_for">Schedule for %1$s</string>
+    <string name="schedule_past">That time already passed</string>
+    <string name="scheduled_for">Scheduled: %1$s</string>
+    <string name="send_now">Send now</string>
+    <string name="cancel_scheduled">Cancel and edit</string>
+    <string name="scheduled_not_sent_title">A scheduled message wasn\'t sent</string>
 </resources>

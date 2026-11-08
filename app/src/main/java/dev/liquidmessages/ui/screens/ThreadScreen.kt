@@ -52,6 +52,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Quickreply
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SimCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -186,6 +187,8 @@ fun ThreadScreen(
     val toast = LocalToast.current
     val p = LocalGlass.current
     val scope = rememberCoroutineScope()
+    // Texto de un programado cancelado: vuelve al campo de escribir.
+    var restore by remember { mutableStateOf<String?>(null) }
 
     // Si se abrió por direcciones, el hilo que tenga exactamente esos participantes.
     val key = remember(addresses, numbers) { Conversations.key(addresses, numbers) }
@@ -331,6 +334,40 @@ fun ThreadScreen(
             }
         }
 
+        // Programados de esta conversación: a la vista, encima del campo de escribir.
+        val scheduled by Stores.scheduled.state.collectAsStateWithLifecycle()
+        val mine = remember(scheduled, people, numbers) { scheduled.filter { Conversations.key(it.addresses, numbers) == Conversations.key(people, numbers) }.sortedBy { it.at } }
+        mine.forEach { sm ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable {
+                        sheet(
+                            SheetSpec(
+                                str(R.string.scheduled_for, scheduledLabel(sm.at)),
+                                listOf(
+                                    SheetAction(str(R.string.send_now), Icons.AutoMirrored.Rounded.Send) { Repo.io { dev.liquidmessages.schedule.Scheduler.sendNow(context, sm.id) } },
+                                    SheetAction(str(R.string.cancel_scheduled), Icons.Rounded.Close) {
+                                        dev.liquidmessages.schedule.Scheduler.cancel(context, sm.id)
+                                        restore = sm.text
+                                    },
+                                ),
+                            ),
+                        )
+                    }
+                    .background(p.accentFg.copy(alpha = 0.10f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(styled(Icons.Rounded.Schedule), null, Modifier.size(18.dp), tint = p.accentFg)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(str(R.string.scheduled_for, scheduledLabel(sm.at)), fontSize = 12.sp, color = p.accentFg, fontWeight = FontWeight.Medium)
+                    Text(sm.text, fontSize = 14.sp, color = p.content, maxLines = 2)
+                }
+            }
+        }
+
         if (canReply) {
             Composer(
                 draftKey = Conversations.key(people, numbers),
@@ -343,6 +380,16 @@ fun ThreadScreen(
                 chipFor = { target -> (Repo.decide(target, lastSub, canSend = isDefault) as? SendDecision.Send)?.chip?.let(::chipName) },
                 multipleChips = sims.multiple && isDefault,
                 chips = sims.chips,
+                restore = restore,
+                onRestored = { restore = null },
+                onSchedule = { text, target, at ->
+                    val body = if (settings.simplifyAccents) SmsLength.simplify(text) else text
+                    dev.liquidmessages.schedule.Scheduler.schedule(
+                        context,
+                        dev.liquidmessages.schedule.ScheduledMessage(System.currentTimeMillis(), people, body, at, (target as? SendTarget.Slot)?.slotIndex, lastSub),
+                    )
+                    toast(str(R.string.scheduled_for, scheduledLabel(at)))
+                },
                 onSend = { text, images, target, done ->
                     val body = if (settings.simplifyAccents) SmsLength.simplify(text) else text
                     sendMessage(context, people, body, images, target, lastSub, dialog, toast, done)
@@ -498,6 +545,9 @@ private fun Composer(
     chipFor: (SendTarget) -> String?,
     multipleChips: Boolean,
     chips: List<dev.liquidmessages.core.sim.SimChip>,
+    restore: String?,
+    onRestored: () -> Unit,
+    onSchedule: (String, SendTarget, Long) -> Unit,
     onSend: (String, List<MmsTransport.Image>, SendTarget, (Boolean) -> Unit) -> Unit,
 ) {
     val p = LocalGlass.current
@@ -513,6 +563,13 @@ private fun Composer(
         saveDraft(draftKey, text)
     }
     androidx.compose.runtime.DisposableEffect(draftKey) { onDispose { saveDraft(draftKey, text) } }
+    LaunchedEffect(restore) {
+        if (restore != null) {
+            text = restore
+            onRestored()
+        }
+    }
+    val dialog = LocalDialog.current
     var slot by rememberSaveable { mutableStateOf<Int?>(null) }
     var pick by remember { mutableStateOf<Picked?>(null) }
     val target = slot?.let { SendTarget.Slot(it) } ?: SendTarget.UsePolicy
@@ -596,6 +653,20 @@ private fun Composer(
                 singleLine = false,
             )
             Spacer(Modifier.size(8.dp))
+            // Programar: solo texto (sin foto) y siendo la predeterminada.
+            if (isDefault && text.isNotBlank() && pick == null) {
+                GlassIconButton(Icons.Rounded.Schedule, str(R.string.schedule), {
+                    dialog(DialogSpec(str(R.string.schedule)) { dismiss ->
+                        ScheduleContent({ at ->
+                            dismiss()
+                            onSchedule(text.trim(), target, at)
+                            text = ""
+                            slot = null
+                        }, dismiss)
+                    })
+                })
+                Spacer(Modifier.size(8.dp))
+            }
             val canSend = text.isNotBlank() || pick != null
             GlassIconButton(
                 Icons.AutoMirrored.Rounded.Send,

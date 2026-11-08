@@ -208,4 +208,15 @@
     <string name="add_quick_reply">Agregar una respuesta rápida</string>
     <string name="remove_quick_reply">Quitar</string>
     <string name="quick_reply_hint">Texto de la respuesta</string>
+    <string name="schedule">Programar</string>
+    <string name="schedule_in_hour">En 1 hora</string>
+    <string name="schedule_tonight">Esta noche</string>
+    <string name="schedule_tomorrow_morning">Mañana a la mañana</string>
+    <string name="schedule_other">O elegí día y hora</string>
+    <string name="schedule_for">Programar para %1$s</string>
+    <string name="schedule_past">Esa hora ya pasó</string>
+    <string name="scheduled_for">Programado: %1$s</string>
+    <string name="send_now">Enviar ahora</string>
+    <string name="cancel_scheduled">Cancelar y editar</string>
+    <string name="scheduled_not_sent_title">No se envió un mensaje programado</string>
 </resources>

@@ -56,6 +56,9 @@ object Stores {
      */
     lateinit var drafts: JsonStore<Map<String, String>>
 
+    /** Mensajes programados que todavía no salieron (files/scheduled.json). */
+    lateinit var scheduled: JsonStore<List<dev.liquidmessages.schedule.ScheduledMessage>>
+
     private var initialized = false
 
     @Synchronized
@@ -64,8 +67,13 @@ object Stores {
         settings = JsonStore(File(context.filesDir, "settings.json"), AppSettings.serializer(), AppSettings())
         drafts = JsonStore(
             File(context.filesDir, "drafts.json"),
-            kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.builtins.serializer<String>(), kotlinx.serialization.builtins.serializer<String>()),
+            kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<String>(), kotlinx.serialization.serializer<String>()),
             emptyMap(),
+        )
+        scheduled = JsonStore(
+            File(context.filesDir, "scheduled.json"),
+            kotlinx.serialization.builtins.ListSerializer(dev.liquidmessages.schedule.ScheduledMessage.serializer()),
+            emptyList(),
         )
         initialized = true
     }

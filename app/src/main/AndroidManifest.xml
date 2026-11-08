@@ -30,6 +30,13 @@
     -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!--
+        Mensajes programados: después de reiniciar el celular hay que volver a poner sus alarmas
+        (el sistema las borra). No se pide el permiso de alarmas exactas: pueden salir unos minutos
+        después de la hora con el celular en reposo.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Avisar cuando llega un mensaje. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -141,6 +148,13 @@
         <receiver android:name=".sms.SmsStatusReceiver" android:exported="false" />
         <receiver android:name=".mms.MmsResultReceiver" android:exported="false" />
         <receiver android:name=".notify.NotificationActionReceiver" android:exported="false" />
+        <receiver android:name=".schedule.ScheduledReceiver" android:exported="false" />
+        <!-- Solo el sistema manda BOOT_COMPLETED; el receptor no usa nada del intent. -->
+        <receiver android:name=".schedule.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Archivos de los MMS en tránsito, compartidos solo con el servicio de MMS del sistema. -->
         <provider
