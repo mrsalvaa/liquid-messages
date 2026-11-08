@@ -94,12 +94,29 @@ class Trash(context: Context) {
 
     /** Mueve conversaciones enteras a la papelera. */
     @Synchronized
-    fun deleteThreads(threads: Map<Long, List<String>>): Int = threads.entries.sumOf { (thread, people) ->
-        move(people) { idsOf(thread) }
+    fun deleteThreads(threads: Map<Long, List<String>>): Int = deleteThreadsUndoable(threads).second
+
+    /** Como [deleteThreads], y además devuelve las entradas creadas, para "Deshacer". */
+    @Synchronized
+    fun deleteThreadsUndoable(threads: Map<Long, List<String>>): Pair<List<String>, Int> {
+        val ids = ArrayList<String>()
+        var n = 0
+        for ((thread, people) in threads) {
+            val entryId = UUID.randomUUID().toString()
+            val moved = move(people, entryId) { idsOf(thread) }
+            if (moved > 0) { ids += entryId; n += moved }
+        }
+        return ids to n
     }
 
-    private fun move(participants: List<String>, ids: () -> List<Long>): Int {
+    /** Como [deleteMessages], y además devuelve la entrada creada (null si no se movió nada). */
+    @Synchronized
+    fun deleteMessagesUndoable(ids: Collection<Long>, participants: List<String>): String? {
         val entryId = UUID.randomUUID().toString()
+        return entryId.takeIf { move(participants, it) { ids.toList() } > 0 }
+    }
+
+    private fun move(participants: List<String>, entryId: String = UUID.randomUUID().toString(), ids: () -> List<Long>): Int {
         val folder = File(dir, entryId)
         val list = ids()
         if (list.isEmpty()) return 0

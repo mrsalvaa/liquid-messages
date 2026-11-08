@@ -125,6 +125,15 @@ object Repo {
         scope.launch(Dispatchers.IO) { block() }
     }
 
+    /** Como [io], pero después de [ms]: lo que devuelve se puede cancelar (para "Deshacer envío"). */
+    fun later(ms: Long, block: suspend () -> Unit): kotlinx.coroutines.Job? {
+        if (_fake.value != null) return null
+        return scope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(ms)
+            block()
+        }
+    }
+
     private var contactsJob: Job? = null
     private var smsJob: Job? = null
 

@@ -151,6 +151,7 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
                     if (v.isNotEmpty()) edit { it.copy(quickReplies = (it.quickReplies + v).distinct()) }
                 })
             })
+            SwitchRow(str(R.string.undo_send), s.undoSend, { v -> edit { it.copy(undoSend = v) } }, subtitle = str(R.string.undo_send_hint))
             SwitchRow(str(R.string.simplify_accents), s.simplifyAccents, { v -> edit { it.copy(simplifyAccents = v) } }, subtitle = str(R.string.simplify_accents_hint))
         }
 

@@ -7,6 +7,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -119,13 +121,22 @@ fun EmptyState(title: String, subtitle: String, modifier: Modifier = Modifier) {
 /** Aviso breve con forma de píldora de cristal. */
 val LocalToast = staticCompositionLocalOf<(String) -> Unit> { {} }
 
+/** Aviso con "Deshacer": dura [UNDO_MS] y al tocar el botón corre la acción. */
+val LocalUndoToast = staticCompositionLocalOf<(String, () -> Unit) -> Unit> { { _, _ -> } }
+
+/** Lo que dura un aviso con "Deshacer" (y la espera antes de enviar, si se puede deshacer). */
+const val UNDO_MS = 5000L
+
+/** Un aviso: el texto y, si tiene, la acción de deshacer. [stamp] distingue dos avisos iguales. */
+class ToastMsg(val text: String, val onUndo: (() -> Unit)? = null, val stamp: Long = System.nanoTime())
+
 @Composable
-fun BoxScope.ToastHost(message: Pair<String, Long>?, onDone: () -> Unit) {
-    var last by remember { mutableStateOf(message?.first) }
-    if (message != null) last = message.first
+fun BoxScope.ToastHost(message: ToastMsg?, onDone: () -> Unit) {
+    var last by remember { mutableStateOf(message) }
+    if (message != null) last = message
     LaunchedEffect(message) {
         if (message != null) {
-            delay(2200)
+            delay(if (message.onUndo != null) UNDO_MS else 2200)
             onDone()
         }
     }
@@ -136,14 +147,31 @@ fun BoxScope.ToastHost(message: Pair<String, Long>?, onDone: () -> Unit) {
         exit = fadeOut() + slideOutVertically { it / 2 },
     ) {
         GlassSurface(shape = CircleShape, strong = true, frost = 12.dp) {
-            Text(
-                last ?: "",
-                Modifier
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    last?.text ?: "",
+                    Modifier
+                        .padding(start = 20.dp, end = if (last?.onUndo != null) 4.dp else 20.dp, top = 12.dp, bottom = 12.dp)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                last?.onUndo?.let { undo ->
+                    Text(
+                        dev.liquidmessages.util.str(dev.liquidmessages.R.string.undo),
+                        Modifier
+                            .clip(CircleShape)
+                            .clickable(role = androidx.compose.ui.semantics.Role.Button) {
+                                // Una sola vez: el aviso se va al tocar.
+                                if (message != null) { undo(); onDone() }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = LocalGlass.current.accentFg,
+                    )
+                }
+            }
         }
     }
 }

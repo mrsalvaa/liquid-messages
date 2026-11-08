@@ -105,6 +105,7 @@ fun ConversationsScreen(
     val sheet = LocalActionSheet.current
     val dialog = LocalDialog.current
     val toast = LocalToast.current
+    val undoToast = LocalUndoToast.current
     val context = LocalContext.current
     val p = LocalGlass.current
     val isDefault by Repo.isDefault.collectAsStateWithLifecycle()
@@ -205,7 +206,7 @@ fun ConversationsScreen(
                             Spacer(Modifier.height(16.dp))
                             DangerButton(str(R.string.delete), {
                                 dismiss()
-                                Repo.io { Repo.trash.deleteThreads(mapOf(c.threadId to c.addresses)) }
+                                trashThreads(mapOf(c.threadId to c.addresses), undoToast)
                             }, Modifier.fillMaxWidth())
                             Spacer(Modifier.height(8.dp))
                             GlassButton(str(R.string.cancel), dismiss, Modifier.fillMaxWidth())
@@ -306,10 +307,7 @@ fun ConversationsScreen(
                         SwipeAction.ARCHIVE -> toggle({ it.archived }, r.c.key) { copy(archived = it) }
                         SwipeAction.PIN -> toggle({ it.pinned }, r.c.key) { copy(pinned = it) }
                         SwipeAction.READ -> Repo.io { Repo.store.markRead(r.c.threadId) }
-                        SwipeAction.DELETE -> {
-                            Repo.io { Repo.trash.deleteThreads(mapOf(r.c.threadId to r.c.addresses)) }
-                            toast(str(R.string.moved_to_trash))
-                        }
+                        SwipeAction.DELETE -> trashThreads(mapOf(r.c.threadId to r.c.addresses), undoToast)
                         SwipeAction.NONE -> Unit
                     }
                 },
@@ -417,6 +415,7 @@ private fun ListSelection(selected: Set<Long>, rows: List<ListRow>, isDefault: B
     val setBottom = LocalSelectionBottom.current
     val dialog = LocalDialog.current
     val toast = LocalToast.current
+    val undoToast = LocalUndoToast.current
     val active = selected.isNotEmpty()
     androidx.activity.compose.BackHandler(enabled = active) { onChange(emptySet()) }
     val chosen = rows.filter { it.c.threadId in selected }
@@ -446,8 +445,7 @@ private fun ListSelection(selected: Set<Long>, rows: List<ListRow>, isDefault: B
                     DangerButton(str(R.string.delete), {
                         dismiss()
                         val threads = chosen.associate { it.c.threadId to it.c.addresses }
-                        Repo.io { Repo.trash.deleteThreads(threads) }
-                        toast(str(R.string.moved_to_trash))
+                        trashThreads(threads, undoToast)
                         onChange(emptySet())
                     }, Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
@@ -463,5 +461,13 @@ private fun ListSelection(selected: Set<Long>, rows: List<ListRow>, isDefault: B
     androidx.compose.runtime.DisposableEffect(active) {
         if (active) setBottom(SelectionBottom(top, items))
         onDispose { setBottom(null) }
+    }
+}
+
+/** Manda conversaciones a la papelera y avisa con "Deshacer", que las devuelve. */
+private fun trashThreads(threads: Map<Long, List<String>>, undoToast: (String, () -> Unit) -> Unit) = Repo.io {
+    val (entries, n) = Repo.trash.deleteThreadsUndoable(threads)
+    if (n > 0) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+        undoToast(str(R.string.moved_to_trash)) { Repo.io { entries.forEach { Repo.trash.restore(it) } } }
     }
 }

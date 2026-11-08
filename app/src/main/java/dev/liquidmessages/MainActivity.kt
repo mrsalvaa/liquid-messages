@@ -186,7 +186,7 @@ private fun MessagesUi(animated: Boolean) {
     var sheet by remember { mutableStateOf<SheetSpec?>(null) }
     var prompt by remember { mutableStateOf<PromptSpec?>(null) }
     var dialog by remember { mutableStateOf<DialogSpec?>(null) }
-    var toast by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    var toast by remember { mutableStateOf<dev.liquidmessages.ui.screens.ToastMsg?>(null) }
     var selection by remember { mutableStateOf<dev.liquidmessages.ui.screens.SelectionBottom?>(null) }
     val reduced = LocalReducedMotion.current
     val tick by Repo.permissionTick.collectAsStateWithLifecycle()
@@ -238,7 +238,8 @@ private fun MessagesUi(animated: Boolean) {
         LocalActionSheet provides { sheet = it },
         LocalPrompt provides { prompt = it },
         LocalDialog provides { dialog = it },
-        LocalToast provides { toast = it to System.nanoTime() },
+        LocalToast provides { toast = dev.liquidmessages.ui.screens.ToastMsg(it) },
+        dev.liquidmessages.ui.screens.LocalUndoToast provides { text, undo -> toast = dev.liquidmessages.ui.screens.ToastMsg(text, undo) },
         dev.liquidmessages.ui.screens.LocalSelectionBottom provides { selection = it },
     ) {
         // Dos chips de países distintos: no se adivina el país de los números sin prefijo.

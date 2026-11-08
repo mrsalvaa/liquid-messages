@@ -231,4 +231,8 @@
     <string name="delivered">Entregado</string>
     <string name="conversation_sound">Sonido de esta conversación</string>
     <string name="tomorrow">Mañana</string>
+    <string name="undo">Deshacer</string>
+    <string name="sending_soon">Enviando…</string>
+    <string name="undo_send">Deshacer envío</string>
+    <string name="undo_send_hint">Los mensajes de texto esperan 5 segundos antes de salir, para poder arrepentirte.</string>
 </resources>

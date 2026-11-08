@@ -185,9 +185,10 @@ fun ThreadScreen(
     val sheet = LocalActionSheet.current
     val dialog = LocalDialog.current
     val toast = LocalToast.current
+    val undoToast = LocalUndoToast.current
     val p = LocalGlass.current
     val scope = rememberCoroutineScope()
-    // Texto de un programado cancelado: vuelve al campo de escribir.
+    // Texto de un programado (o de un envío deshecho) cancelado: vuelve al campo de escribir.
     var restore by remember { mutableStateOf<String?>(null) }
 
     // Si se abrió por direcciones, el hilo que tenga exactamente esos participantes.
@@ -273,7 +274,14 @@ fun ThreadScreen(
                     }
                     if (isDefault) {
                         add(SheetAction(str(R.string.delete), Icons.Rounded.DeleteOutline) {
-                            confirmDelete(str(R.string.delete_message_title), str(R.string.to_trash_text)) { Repo.io { Repo.trash.deleteMessages(listOf(m.id), people) } }
+                            confirmDelete(str(R.string.delete_message_title), str(R.string.to_trash_text)) {
+                                Repo.io {
+                                    val entry = Repo.trash.deleteMessagesUndoable(listOf(m.id), people) ?: return@io
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        undoToast(str(R.string.moved_to_trash)) { Repo.io { Repo.trash.restore(entry) } }
+                                    }
+                                }
+                            }
                         })
                     }
                 },
@@ -399,7 +407,7 @@ fun ThreadScreen(
                 },
                 onSend = { text, images, target, done ->
                     val body = if (settings.simplifyAccents) SmsLength.simplify(text) else text
-                    sendMessage(context, people, body, images, target, lastSub, dialog, toast, done)
+                    sendMessage(context, people, body, images, target, lastSub, dialog, toast, undoToast to { t -> restore = t }, done)
                 },
             )
         } else if (single != null || people.isEmpty()) {

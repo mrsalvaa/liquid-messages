@@ -43,15 +43,30 @@ fun sendMessage(
     conversationSubscription: Int?,
     dialog: (DialogSpec) -> Unit,
     toast: (String) -> Unit,
+    /** Con esto, los mensajes de texto esperan [UNDO_MS] y el aviso ofrece deshacer (devuelve el texto). */
+    undo: Pair<(String, () -> Unit) -> Unit, (String) -> Unit>? = null,
     onDone: (Boolean) -> Unit,
 ) {
     if (people.isEmpty() || (text.isBlank() && images.isEmpty())) return
     fun go(chip: SimChip?) {
-        Repo.io {
+        val work: suspend () -> Unit = {
             if (images.isNotEmpty() || people.size > 1) MmsTransport.send(context, people, text, images, chip)
             else SmsSender.send(context, people[0], text, chip)
         }
-        onDone(true)
+        // Las fotos no se demoran: si se deshace, el texto vuelve al campo pero la foto no.
+        if (undo != null && images.isEmpty() && dev.liquidmessages.data.Stores.settings.value.undoSend) {
+            val job = Repo.later(UNDO_MS, work)
+            onDone(true)
+            if (job != null) {
+                undo.first(str(R.string.sending_soon)) {
+                    job.cancel()
+                    undo.second(text)
+                }
+            }
+        } else {
+            Repo.io(work)
+            onDone(true)
+        }
     }
     when (val d = Repo.decide(target, conversationSubscription, canSend = Repo.isDefault.value, hasText = true)) {
         is SendDecision.Send -> go(d.chip)

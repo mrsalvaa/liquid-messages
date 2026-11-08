@@ -225,4 +225,8 @@
     <string name="delivered">Delivered</string>
     <string name="conversation_sound">Sound for this conversation</string>
     <string name="tomorrow">Tomorrow</string>
+    <string name="undo">Undo</string>
+    <string name="sending_soon">Sending…</string>
+    <string name="undo_send">Undo send</string>
+    <string name="undo_send_hint">Text messages wait 5 seconds before sending, so you can take them back.</string>
 </resources>

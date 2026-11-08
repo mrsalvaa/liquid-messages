@@ -74,6 +74,9 @@ data class AppSettings(
     /** Conversaciones con su propio canal de notificación (sonido o vibración distintos), por clave. */
     val customSound: Set<String> = emptySet(),
 
+    /** Esperar unos segundos antes de enviar, con "Deshacer" (solo mensajes de texto). */
+    val undoSend: Boolean = true,
+
     /** Respuestas rápidas: frases que se insertan en el campo de escribir con un toque. */
     val quickReplies: List<String> = listOf("Ahora no puedo, te escribo después.", "Llego en 10 minutos.", "Dale, gracias.", "¿Te puedo llamar?"),
 
