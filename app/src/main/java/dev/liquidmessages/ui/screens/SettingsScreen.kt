@@ -25,6 +25,7 @@ import dev.liquidmessages.data.AppSettings
 import dev.liquidmessages.data.Repo
 import dev.liquidmessages.data.Stores
 import dev.liquidmessages.security.AppLock
+import androidx.compose.material.icons.rounded.Close
 import dev.liquidmessages.ui.components.SwitchRow
 import dev.liquidmessages.ui.glass.GlassCard
 import dev.liquidmessages.ui.glass.LocalGlass
@@ -118,6 +119,21 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
 
         SectionLabel(str(R.string.writing))
         GlassCard {
+            val prompt = dev.liquidmessages.ui.glass.LocalPrompt.current
+            Text(str(R.string.quick_replies), fontSize = 16.sp)
+            s.quickReplies.forEach { r ->
+                SettingRow(r, trailing = {
+                    dev.liquidmessages.ui.glass.GlassIconButton(androidx.compose.material.icons.Icons.Rounded.Close, str(R.string.remove_quick_reply), {
+                        edit { it.copy(quickReplies = it.quickReplies - r) }
+                    }, size = 40.dp)
+                })
+            }
+            SettingRow(str(R.string.add_quick_reply), onClick = {
+                prompt(dev.liquidmessages.ui.glass.PromptSpec(str(R.string.add_quick_reply), str(R.string.add_recipient), str(R.string.quick_reply_hint)) { t ->
+                    val v = t.trim()
+                    if (v.isNotEmpty()) edit { it.copy(quickReplies = (it.quickReplies + v).distinct()) }
+                })
+            })
             SwitchRow(str(R.string.simplify_accents), s.simplifyAccents, { v -> edit { it.copy(simplifyAccents = v) } }, subtitle = str(R.string.simplify_accents_hint))
         }
 

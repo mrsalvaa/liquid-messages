@@ -204,4 +204,8 @@
     <string name="more">Más</string>
     <string name="delete_conversations_title">¿Borrar %1$d conversaciones?</string>
     <string name="draft_label">Borrador:</string>
+    <string name="quick_replies">Respuestas rápidas</string>
+    <string name="add_quick_reply">Agregar una respuesta rápida</string>
+    <string name="remove_quick_reply">Quitar</string>
+    <string name="quick_reply_hint">Texto de la respuesta</string>
 </resources>

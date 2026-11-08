@@ -198,4 +198,8 @@
     <string name="more">More</string>
     <string name="delete_conversations_title">Delete %1$d conversations?</string>
     <string name="draft_label">Draft:</string>
+    <string name="quick_replies">Quick replies</string>
+    <string name="add_quick_reply">Add a quick reply</string>
+    <string name="remove_quick_reply">Remove</string>
+    <string name="quick_reply_hint">Text of the reply</string>
 </resources>

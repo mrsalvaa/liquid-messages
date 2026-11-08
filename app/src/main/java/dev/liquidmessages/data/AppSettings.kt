@@ -67,6 +67,9 @@ data class AppSettings(
     val swipeRight: Int = 1,
     val swipeLeft: Int = 0,
 
+    /** Respuestas rápidas: frases que se insertan en el campo de escribir con un toque. */
+    val quickReplies: List<String> = listOf("Ahora no puedo, te escribo después.", "Llego en 10 minutos.", "Dale, gracias.", "¿Te puedo llamar?"),
+
     // Conversaciones, por su clave de participantes (Conversations.key), no por thread_id.
     val pinned: Set<String> = emptySet(),
     val archived: Set<String> = emptySet(),

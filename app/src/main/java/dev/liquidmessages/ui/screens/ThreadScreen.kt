@@ -50,6 +50,7 @@ import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Quickreply
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SimCard
 import androidx.compose.material3.Icon
@@ -575,6 +576,14 @@ private fun Composer(
             if (isDefault) {
                 GlassIconButton(Icons.Rounded.AddPhotoAlternate, str(R.string.attach), {
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                })
+                Spacer(Modifier.size(8.dp))
+            }
+            // Con el campo vacío, las respuestas rápidas: se insertan, no se envían.
+            val replies = Stores.settings.state.collectAsStateWithLifecycle().value.quickReplies
+            if (text.isEmpty() && replies.isNotEmpty()) {
+                GlassIconButton(Icons.Rounded.Quickreply, str(R.string.quick_replies), {
+                    sheet(SheetSpec(str(R.string.quick_replies), replies.map { r -> SheetAction(r, Icons.Rounded.Quickreply) { text = r } }))
                 })
                 Spacer(Modifier.size(8.dp))
             }
