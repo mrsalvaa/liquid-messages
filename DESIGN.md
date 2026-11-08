@@ -173,3 +173,22 @@ Permisos finales: los ocho de las etapas 2 y 3 más `USE_BIOMETRIC`.
 **Arreglado al probar:** dos MMS del mismo segundo se confundían al importar (se perdía uno); el encabezado del respaldo contaba los avisos sin bajar; la papelera perdía el lugar de descarga de un MMS sin bajar; recién borrado decía "quedan 29 días".
 
 Al terminar se borró todo desde la app, se sacó el PIN de prueba, se devolvió el rol de SMS a la app del emulador, se borró el archivo exportado, se desinstaló la build y se apagó el emulador. **Sin probar:** la huella (el emulador se probó con PIN) y un respaldo real de otra app.
+
+## Pulido: personalización, funciones y avisos
+
+- **Íconos:** Liquid (cristal sobre grafito, burbuja con los puntos calados y el punto rojo de la suite), Material (violeta `#8A55D6`, estilo Fossify), Samsung (burbuja azul sobre blanco), iPhone (verde) y monocromo. Un `activity-alias` por ícono, como en el resto de la suite.
+- **Conversaciones:** burbujas recibidas grises o con el color del contacto (el de su avatar), letra chica/normal/grande, hora siempre o al tocar, lista compacta, mensajes de solo emojis grandes y sin burbuja, y deslizar a cada lado (nada, archivar, borrar a la papelera, leída o fijar; en material3 1.4 la acción llega por `onDismiss`).
+- **Selección múltiple** con la barra de Recorder, y "Marcar todo como leído".
+- **Borradores** en `files/drafts.json` (no en el proveedor: ninguna otra app los ve).
+- **Respuestas rápidas** editables en Ajustes.
+- **Programados** en `files/scheduled.json`, con `AlarmManager` no exacto y `RECEIVE_BOOT_COMPLETED` para volver a ponerlos al reiniciar. Al salir siguen la regla de chips.
+- **Avisos:** qué muestran (quién y el texto, solo quién, nada), sonido por conversación (canal propio con id sin el número) e informe de entrega opcional.
+- Ajustes con desplegables de ventana emergente (`Dropdown` de Recorder/Contacts) para deslizar, chip de envío y avisos.
+
+## Excepción local de ui/glass: el fondo se congela al tocar
+
+Con el fondo "En movimiento", las manchas avanzan 15 veces por segundo y cada paso obliga a redibujar todo el cristal (unos 13 ms por cuadro en el S24 FE, más que los 8,3 ms de 120 Hz). Si ese paso cae en medio de un desplazamiento, se pierde un cuadro. En `Theme.kt`, `BackgroundHold` congela el reloj del fondo mientras hay un dedo en la pantalla y hasta 1 s después de soltarlo; al retomar sigue desde donde quedó, sin salto. `GlassRoot` solo mira los toques (pase `Initial`, sin consumirlos).
+
+Medido en el S24 FE con la build `profile`, 500 conversaciones inventadas en memoria y fondo en movimiento, 12 deslizamientos: lista 1,7 % de cuadros lentos (antes 2,1–2,3 %), conversación larga 2,5–2,8 %, mediana 7–8 ms. En reposo el fondo en movimiento sigue dibujando 15 cuadros por segundo (como en el resto de la suite); con "Liso" no dibuja nada.
+
+Además: los formateadores de fecha se arman una vez por idioma (antes en cada fila y cada cuadro), y en una conversación el nombre y el color de cada remitente se calculan una vez.

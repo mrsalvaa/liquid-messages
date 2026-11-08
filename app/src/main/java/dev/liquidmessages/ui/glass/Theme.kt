@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -365,6 +366,22 @@ fun GlassTheme(settings: GlassStyle, content: @Composable () -> Unit) {
  * - el fondo de color, para las superficies que están dentro del contenido (tarjetas, botones);
  * - el fondo más el contenido, para lo que flota encima ([floating]: barra inferior, menús).
  */
+/**
+ * Congela las manchas del fondo en movimiento mientras se toca la pantalla y hasta un segundo
+ * después (lo que tarda en frenar un desplazamiento). Excepción local de Mensajes.
+ */
+object BackgroundHold {
+    @Volatile private var touching = false
+    @Volatile private var releasedAt = 0L
+
+    fun held(now: Long): Boolean = touching || now - releasedAt < 1_000L
+
+    internal fun touch(down: Boolean) {
+        if (touching && !down) releasedAt = SystemClock.uptimeMillis()
+        touching = down
+    }
+}
+
 @Composable
 fun GlassRoot(
     animated: Boolean = true,
@@ -373,7 +390,17 @@ fun GlassRoot(
 ) {
     val background = rememberLayerBackdrop()
     val page = rememberLayerBackdrop()
-    Box(Modifier.fillMaxSize()) {
+    // Solo mira los toques (sin consumirlos) para congelar el fondo mientras dura el gesto.
+    Box(
+        Modifier.fillMaxSize().pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    BackgroundHold.touch(e.changes.any { it.pressed })
+                }
+            }
+        },
+    ) {
         Box(Modifier.fillMaxSize().layerBackdrop(page)) {
             LiquidBackground(Modifier.fillMaxSize().layerBackdrop(background), animated)
             CompositionLocalProvider(LocalBackdrop provides background) {
@@ -406,8 +433,18 @@ fun LiquidBackground(modifier: Modifier = Modifier, animate: Boolean = true) {
     LaunchedEffect(animated, lifecycle, p.blobs.isEmpty()) {
         if (!animated || p.blobs.isEmpty()) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            // Excepción local de Mensajes (ver DESIGN.md): el reloj del fondo solo corre mientras no
+            // se toca la pantalla. Cada paso del fondo obliga a redibujar todo el cristal, y si cae
+            // en medio de un desplazamiento se pierde un cuadro. Al soltar sigue desde donde quedó.
+            var last = SystemClock.uptimeMillis()
+            var clock = last % 90_000L
             while (true) {
-                phase = (SystemClock.uptimeMillis() % 90_000L) / 90_000f * (2 * PI).toFloat()
+                val now = SystemClock.uptimeMillis()
+                if (!BackgroundHold.held(now)) {
+                    clock = (clock + (now - last)) % 90_000L
+                    phase = clock / 90_000f * (2 * PI).toFloat()
+                }
+                last = now
                 delay(66)
             }
         }

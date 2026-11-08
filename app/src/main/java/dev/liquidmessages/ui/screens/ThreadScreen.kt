@@ -216,6 +216,13 @@ fun ThreadScreen(
             }
         }.asReversed()
     }
+    // Nombre y color de cada remitente, calculados una vez (no en cada burbuja y cada cuadro).
+    val senders = remember(messages, book, numbers) {
+        messages.asSequence().filter { !it.box.outgoing }.map { it.address }.distinct().associateWith { who(listOf(it.ifBlank { people.firstOrNull().orEmpty() }), book, numbers).title }
+    }
+    val dark = p.dark
+    val senderColors = remember(senders, dark) { senders.mapValues { (_, name) -> dev.liquidmessages.ui.components.avatarColor(name, dark) } }
+    val bubbleFont = textSizeOf(settings.textSize)
     val single = people.singleOrNull()
     val canReply = (single != null && SenderKind.of(single).canReply) || (group && people.all { SenderKind.of(it) != SenderKind.ALPHANUMERIC })
     val lastSub = messages.lastOrNull { it.subscriptionId != null }?.subscriptionId
@@ -303,7 +310,7 @@ fun ThreadScreen(
             // Pegadas abajo, junto al campo de escribir, aunque sean pocas.
             verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom),
         ) {
-            items(lines, key = { l -> if (l is Line.Msg) "m${l.m.id}" else "d${(l as Line.Day).date}" }) { l ->
+            items(lines, key = { l -> if (l is Line.Msg) "m${l.m.id}" else "d${(l as Line.Day).date}" }, contentType = { if (it is Line.Msg) 1 else 0 }) { l ->
                 when (l) {
                     is Line.Day -> Text(
                         Dates.header(l.date),
@@ -316,11 +323,11 @@ fun ThreadScreen(
                     is Line.Msg -> Bubble(
                         l.m,
                         BubbleStyle(
-                            contactColor = if (settings.bubbleColor == 1 && !l.m.box.outgoing) dev.liquidmessages.ui.components.avatarColor(who(listOf(l.m.address.ifBlank { people.firstOrNull().orEmpty() }), book, numbers).title, p.dark) else null,
-                            fontSize = textSizeOf(settings.textSize),
+                            contactColor = if (settings.bubbleColor == 1 && !l.m.box.outgoing) senderColors[l.m.address] else null,
+                            fontSize = bubbleFont,
                             timeAlways = settings.timeMode == 0,
                         ),
-                        sender = if (group && !l.m.box.outgoing) who(listOf(l.m.address), book, numbers).title else null,
+                        sender = if (group && !l.m.box.outgoing) senders[l.m.address] else null,
                         chipLabel = if (sims.multiple) sims.bySubscription(l.m.subscriptionId)?.let { str(R.string.sim_label, it.slotNumber) } else null,
                         onLongClick = { bubbleMenu(l.m, l.code) },
                         onLink = { link -> Actions.link(context, link, dialog) },
