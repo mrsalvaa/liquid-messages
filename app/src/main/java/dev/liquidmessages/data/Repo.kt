@@ -146,7 +146,10 @@ object Repo {
         blocked = Blocked(app)
         trash = dev.liquidmessages.sms.Trash(app)
         // Lo que pasó los 30 días en la papelera se borra para siempre.
-        scope.launch(Dispatchers.IO) { runCatching { trash.cleanUp() } }
+        scope.launch(Dispatchers.IO) {
+            runCatching { trash.cleanUp() }
+            runCatching { dev.liquidmessages.sms.Filters.cleanCodes(app) }
+        }
         _isDefault.value = DefaultSms.isDefault(app)
         scope.launch {
             Stores.settings.state.map { it.defaultCountry to it.defaultAreaCode }.distinctUntilChanged().collect { (country, area) ->

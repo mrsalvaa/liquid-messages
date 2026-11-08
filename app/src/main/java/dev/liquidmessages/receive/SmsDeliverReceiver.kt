@@ -37,6 +37,8 @@ class SmsDeliverReceiver : BroadcastReceiver() {
                     } ?: continue
                     Notifier.incoming(context, thread, listOf(address))
                 }
+                // Al llegar un código nuevo, los viejos ya leídos se van (si está activado).
+                runCatching { dev.liquidmessages.sms.Filters.cleanCodes(context) }
             } finally {
                 pending.finish()
             }

@@ -262,4 +262,18 @@
     <string name="close">Cerrar</string>
     <string name="you_to">Vos → %1$s</string>
     <string name="reactions_label">Reacciones: %1$s</string>
+    <string name="spam_folder">Posible spam</string>
+    <string name="spam_folder_hint">Mensajes de números desconocidos que parecen estafas (un link y premios, cuentas bloqueadas, paquetes retenidos…). Se decide en tu celular; no avisan y nunca se borran solos.</string>
+    <string name="mark_spam">Marcar como spam</string>
+    <string name="not_spam">No es spam</string>
+    <string name="moved_to_spam">Movida a Posible spam</string>
+    <string name="moved_to_inbox">Movida a la bandeja</string>
+    <string name="spam_filter">Filtro de spam</string>
+    <string name="spam_filter_hint">Los números desconocidos con links de estafa van a Posible spam, sin avisar. Nunca se filtran contactos ni gente a la que le escribiste.</string>
+    <string name="code_cleanup">Borrar códigos de verificación</string>
+    <string name="code_cleanup_never">Nunca</string>
+    <string name="code_cleanup_1h">Después de 1 hora</string>
+    <string name="code_cleanup_24h">Después de 24 horas</string>
+    <string name="code_cleanup_7d">Después de 7 días</string>
+    <string name="code_cleanup_hint">Solo los ya leídos, y nunca de contactos ni de conversaciones donde escribiste. Van a la papelera.</string>
 </resources>

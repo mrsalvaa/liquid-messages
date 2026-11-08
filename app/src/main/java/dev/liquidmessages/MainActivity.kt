@@ -96,6 +96,7 @@ sealed interface Overlay {
     data object Trash : Overlay
     data object Archived : Overlay
     data object Starred : Overlay
+    data object Spam : Overlay
     data object Settings : Overlay
 }
 
@@ -316,11 +317,21 @@ private fun MessagesUi(animated: Boolean) {
                                 onSettings = { push(Overlay.Settings) },
                                 onArchived = { push(Overlay.Archived) },
                                 onStarred = { push(Overlay.Starred) },
+                                onSpam = { push(Overlay.Spam) },
                                 onBack = {},
                             )
                             Overlay.Archived -> ConversationsScreen(
                                 padding,
                                 archived = true,
+                                onOpen = { push(Overlay.Thread(it.threadId, it.addresses)) },
+                                onSettings = {},
+                                onArchived = {},
+                                onBack = ::pop,
+                            )
+                            Overlay.Spam -> ConversationsScreen(
+                                padding,
+                                archived = false,
+                                spam = true,
                                 onOpen = { push(Overlay.Thread(it.threadId, it.addresses)) },
                                 onSettings = {},
                                 onArchived = {},

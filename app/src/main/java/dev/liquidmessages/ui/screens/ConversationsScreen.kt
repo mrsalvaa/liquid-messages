@@ -27,7 +27,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.Report
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Call
@@ -97,6 +100,9 @@ fun ConversationsScreen(
     onArchived: () -> Unit,
     onBack: () -> Unit,
     onStarred: () -> Unit = {},
+    onSpam: () -> Unit = {},
+    /** La carpeta "Posible spam" (con [archived] en false). */
+    spam: Boolean = false,
 ) {
     val inbox by Repo.inbox.collectAsStateWithLifecycle()
     val book by Repo.book.collectAsStateWithLifecycle()
@@ -125,9 +131,13 @@ fun ConversationsScreen(
         }
     }
 
-    val rows by produceState<List<ListRow>?>(null, inbox, book, numbers, settings.pinned, settings.archived, settings.muted, query, archived) {
+    // Hilos que parecen spam: se calcula aparte (recorre todos los mensajes) y solo cuando cambian.
+    val suspicious by produceState(emptySet<Long>(), inbox) { value = withContext(Dispatchers.Default) { dev.liquidmessages.sms.Filters.suspiciousThreads(inbox.messages) } }
+    val rows by produceState<List<ListRow>?>(null, inbox, book, numbers, settings.pinned, settings.archived, settings.muted, query, archived, spam, suspicious, settings.spam, settings.notSpam, settings.spamFilter) {
         value = withContext(Dispatchers.Default) {
-            val list = Conversations.build(inbox.messages, numbers, prefsOf(settings), { inbox.participants[it] }, archived)
+            fun build(a: Boolean) = Conversations.build(inbox.messages, numbers, prefsOf(settings), { inbox.participants[it] }, a)
+            // En "Posible spam" van las archivadas también; en las demás vistas, el spam no aparece.
+            val list = if (spam) build(false) + build(true) else build(archived)
             val q = Fold.fold(query.trim())
             val digits = query.filter(Char::isDigit)
             if (q.isEmpty()) {
@@ -151,7 +161,7 @@ fun ConversationsScreen(
                     }
                 }.sortedByDescending { it.shown.date }
             }
-        }
+        }.filter { r -> dev.liquidmessages.sms.Filters.isSpam(settings, r.c.key, r.c.threadId, r.who.contactId != null, suspicious) == spam }
     }
 
     fun toggle(get: (AppSettings) -> Set<String>, key: String, put: AppSettings.(Set<String>) -> AppSettings) {
@@ -170,6 +180,14 @@ fun ConversationsScreen(
             })
             add(SheetAction(str(if (c.prefs.muted) R.string.unmute else R.string.mute), if (c.prefs.muted) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff) {
                 toggle({ it.muted }, c.key) { copy(muted = it) }
+            })
+            // Spam: lo marcado a mano manda sobre el filtro.
+            add(SheetAction(str(if (spam) R.string.not_spam else R.string.mark_spam), if (spam) Icons.Rounded.Inbox else Icons.Rounded.Report) {
+                Stores.settings.update { s ->
+                    if (spam) s.copy(spam = s.spam - c.key, notSpam = s.notSpam + c.key)
+                    else s.copy(spam = s.spam + c.key, notSpam = s.notSpam - c.key)
+                }
+                toast(str(if (spam) R.string.moved_to_inbox else R.string.moved_to_spam))
             })
             add(SheetAction(str(R.string.conversation_sound), Icons.Rounded.MusicNote) {
                 dev.liquidmessages.notify.Notifier.openConversationSound(context, c.key, r.who.title)
@@ -241,7 +259,12 @@ fun ConversationsScreen(
         ),
     ) {
         item(key = "title") {
-            if (archived) {
+            if (spam) {
+                Column {
+                    BackTitle(str(R.string.spam_folder), onBack, Modifier.padding(horizontal = 4.dp))
+                    Text(str(R.string.spam_folder_hint), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 13.sp, color = p.contentSecondary)
+                }
+            } else if (archived) {
                 BackTitle(str(R.string.archived), onBack, Modifier.padding(horizontal = 4.dp))
             } else {
                 ScreenTitle(str(R.string.conversations), Modifier.padding(horizontal = 4.dp)) {
@@ -260,6 +283,7 @@ fun ConversationsScreen(
                                     listOf(
                                         SheetAction(str(R.string.archived), Icons.Rounded.Archive, onClick = onArchived),
                                         SheetAction(str(R.string.starred), Icons.Rounded.Star, onClick = onStarred),
+                                        SheetAction(str(R.string.spam_folder), Icons.Rounded.Report, onClick = onSpam),
                                     ),
                                 ),
                             )

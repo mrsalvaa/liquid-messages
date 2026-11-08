@@ -256,4 +256,18 @@
     <string name="close">Close</string>
     <string name="you_to">You → %1$s</string>
     <string name="reactions_label">Reactions: %1$s</string>
+    <string name="spam_folder">Possible spam</string>
+    <string name="spam_folder_hint">Messages from unknown numbers that look like scams (a link plus prizes, locked accounts, held packages…). Decided on your phone; they don\'t notify and are never deleted on their own.</string>
+    <string name="mark_spam">Mark as spam</string>
+    <string name="not_spam">Not spam</string>
+    <string name="moved_to_spam">Moved to Possible spam</string>
+    <string name="moved_to_inbox">Moved to the inbox</string>
+    <string name="spam_filter">Spam filter</string>
+    <string name="spam_filter_hint">Unknown numbers with scam-like links go to Possible spam, without notifying. Contacts and people you\'ve written to are never filtered.</string>
+    <string name="code_cleanup">Delete verification codes</string>
+    <string name="code_cleanup_never">Never</string>
+    <string name="code_cleanup_1h">After 1 hour</string>
+    <string name="code_cleanup_24h">After 24 hours</string>
+    <string name="code_cleanup_7d">After 7 days</string>
+    <string name="code_cleanup_hint">Only codes already read, and never from contacts or conversations where you wrote. They go to the trash.</string>
 </resources>

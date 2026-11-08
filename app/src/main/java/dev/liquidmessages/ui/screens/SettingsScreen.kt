@@ -124,6 +124,11 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> 
                     }
                 }
             }, subtitle = str(R.string.app_lock_hint))
+            SwitchRow(str(R.string.spam_filter), s.spamFilter, { v -> edit { it.copy(spamFilter = v) } }, subtitle = str(R.string.spam_filter_hint))
+            Dropdown(str(R.string.code_cleanup), listOf(0, 1, 24, 168), s.codeCleanup, { h ->
+                str(when (h) { 0 -> R.string.code_cleanup_never; 1 -> R.string.code_cleanup_1h; 24 -> R.string.code_cleanup_24h; else -> R.string.code_cleanup_7d })
+            }) { v -> edit { it.copy(codeCleanup = v) } }
+            Text(str(R.string.code_cleanup_hint), fontSize = 13.sp, color = p.contentSecondary)
             // La lista de bloqueados del sistema solo la puede ver la app de SMS o de teléfono predeterminada.
             if (isDefault) SettingRow(str(R.string.blocked_numbers), onClick = onBlocked)
             SettingRow(str(R.string.trash), subtitle = str(R.string.trash_hint), onClick = onTrash)

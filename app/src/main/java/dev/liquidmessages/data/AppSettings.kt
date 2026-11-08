@@ -80,6 +80,14 @@ data class AppSettings(
     /** Respuestas rápidas: frases que se insertan en el campo de escribir con un toque. */
     val quickReplies: List<String> = listOf("Ahora no puedo, te escribo después.", "Llego en 10 minutos.", "Dale, gracias.", "¿Te puedo llamar?"),
 
+    /** Filtro de spam local: lo que parece estafa va a "Posible spam", sin notificar. */
+    val spamFilter: Boolean = true,
+    /** Marcadas a mano como spam / como no spam, por clave de conversación. Mandan sobre el filtro. */
+    val spam: Set<String> = emptySet(),
+    val notSpam: Set<String> = emptySet(),
+    /** Códigos de verificación leídos van a la papelera pasadas estas horas (0 = nunca). */
+    val codeCleanup: Int = 0,
+
     /** Mensajes destacados, por id (los MMS en negativo, como los lee SystemSms). */
     val starred: Set<Long> = emptySet(),
 
