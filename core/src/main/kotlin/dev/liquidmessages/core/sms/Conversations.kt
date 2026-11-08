@@ -28,9 +28,38 @@ data class Message(
     val read: Boolean = true,
     /** Suscripción (chip) por la que llegó o salió; null si el sistema no lo dice. */
     val subscriptionId: Int? = null,
-    /** MMS: hasta la etapa de MMS se muestra como "MMS, no soportado todavía". */
     val mms: Boolean = false,
-)
+    /** MMS: fotos, audio, video u otros archivos (el texto va en [body]). */
+    val attachments: List<Attachment> = emptyList(),
+    /** MMS: asunto, si tiene. */
+    val subject: String? = null,
+    /**
+     * MMS recibido que todavía no se bajó (solo llegó el aviso): se muestra con "Descargar". Si la
+     * descarga falla, el aviso queda guardado y se puede reintentar: nunca se pierde.
+     */
+    val pending: Boolean = false,
+) {
+    /** Lo que se puede contar de un mensaje en una línea, sin el texto: "Foto", "2 adjuntos". */
+    val hasContent: Boolean get() = body.isNotBlank() || attachments.isNotEmpty() || subject != null
+}
+
+/** Un adjunto de un MMS. [partId] es la fila en el proveedor (content://mms/part/ID). */
+data class Attachment(
+    val partId: Long,
+    val contentType: String,
+    val name: String? = null,
+) {
+    val kind: Kind
+        get() = when {
+            contentType.startsWith("image/", ignoreCase = true) -> Kind.IMAGE
+            contentType.startsWith("video/", ignoreCase = true) -> Kind.VIDEO
+            contentType.startsWith("audio/", ignoreCase = true) -> Kind.AUDIO
+            contentType.equals("text/x-vcard", ignoreCase = true) || contentType.equals("text/vcard", ignoreCase = true) -> Kind.CONTACT
+            else -> Kind.FILE
+        }
+
+    enum class Kind { IMAGE, VIDEO, AUDIO, CONTACT, FILE }
+}
 
 /** Qué es un remitente, para saber si se le puede contestar. */
 enum class SenderKind {
@@ -112,7 +141,7 @@ object Conversations {
         messages.filter { it.box != Box.DRAFT }
             .groupBy { it.threadId }
             .map { (thread, list) ->
-                val last = list.maxWith(compareBy<Message> { it.date }.thenBy { it.id })
+                val last = list.maxWith(compareBy<Message> { it.date }.thenBy { kotlin.math.abs(it.id) })
                 val addresses = participants(thread)?.takeIf { it.isNotEmpty() } ?: listOf(last.address)
                 val key = key(addresses, numbers)
                 Conversation(
@@ -130,5 +159,6 @@ object Conversations {
     /** Los mensajes de una conversación en orden de lectura (del más viejo al más nuevo). */
     fun thread(messages: List<Message>, threadId: Long): List<Message> =
         messages.filter { it.threadId == threadId && it.box != Box.DRAFT }
-            .sortedWith(compareBy<Message> { it.date }.thenBy { it.id })
+            // En el mismo instante, el que se guardó antes (los MMS tienen el id en negativo).
+            .sortedWith(compareBy<Message> { it.date }.thenBy { kotlin.math.abs(it.id) })
 }

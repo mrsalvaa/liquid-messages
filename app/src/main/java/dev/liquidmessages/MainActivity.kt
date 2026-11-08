@@ -72,6 +72,7 @@ import dev.liquidmessages.ui.glass.PromptHost
 import dev.liquidmessages.ui.glass.PromptSpec
 import dev.liquidmessages.ui.glass.SheetSpec
 import dev.liquidmessages.ui.glass.isDarkTheme
+import dev.liquidmessages.ui.screens.BlockedScreen
 import dev.liquidmessages.ui.screens.ConversationsScreen
 import dev.liquidmessages.ui.screens.LocalToast
 import dev.liquidmessages.ui.screens.NewMessageScreen
@@ -86,8 +87,10 @@ import java.util.Locale
 /** Pantallas que se abren encima de la lista. */
 sealed interface Overlay {
     /** Una conversación, por su hilo o, si es nueva, por las direcciones. */
-    data class Thread(val threadId: Long?, val addresses: List<String>, val text: String = "") : Overlay
-    data object New : Overlay
+    data class Thread(val threadId: Long?, val addresses: List<String>, val text: String = "", val image: android.net.Uri? = null) : Overlay
+    /** Elegir a quién escribir; [text] e [image] vienen de compartir desde otra app. */
+    data class New(val text: String = "", val image: android.net.Uri? = null) : Overlay
+    data object Blocked : Overlay
     data object Archived : Overlay
     data object Settings : Overlay
 }
@@ -101,9 +104,52 @@ class MainActivity : ComponentActivity() {
         Repo.start()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handle(intent)
+    }
+
+    /**
+     * Lo que llega de otras apps o de una notificación queda listo para escribir: nunca se envía
+     * solo. "smsto:" y "sms:" pueden traer varios números separados por coma o punto y coma, y el
+     * texto en "sms_body" o en "?body=".
+     */
+    private fun handle(intent: Intent?) {
+        intent ?: return
+        when (intent.action) {
+            "dev.liquidmessages.OPEN_THREAD" -> Repo.requestCompose(
+                Repo.Compose(
+                    addresses = listOfNotNull(intent.getStringExtra(dev.liquidmessages.notify.Notifier.EXTRA_ADDRESS)?.takeIf { it.isNotBlank() }),
+                    body = intent.getStringExtra(dev.liquidmessages.notify.Notifier.EXTRA_TEXT).orEmpty(),
+                    threadId = intent.getLongExtra(dev.liquidmessages.notify.Notifier.EXTRA_THREAD, -1).takeIf { it >= 0 },
+                ),
+            )
+            Intent.ACTION_SENDTO, Intent.ACTION_VIEW -> {
+                val data = intent.data ?: return
+                if (data.scheme !in setOf("sms", "smsto", "mms", "mmsto")) return
+                val raw = data.schemeSpecificPart.orEmpty()
+                val addresses = raw.substringBefore('?').split(',', ';').map { android.net.Uri.decode(it).trim() }.filter { it.isNotEmpty() }
+                val body = intent.getStringExtra("sms_body") ?: raw.substringAfter("?body=", "").takeIf { it.isNotEmpty() }?.let(android.net.Uri::decode).orEmpty()
+                Repo.requestCompose(Repo.Compose(addresses, body))
+            }
+            Intent.ACTION_SEND -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+                val image = if (intent.type?.startsWith("image/") == true) {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM)
+                } else {
+                    null
+                }
+                Repo.requestCompose(Repo.Compose(body = text, image = image))
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) handle(intent)
         preferHighestRefreshRate()
         setContent {
             val settings by Stores.settings.state.collectAsStateWithLifecycle()
@@ -129,6 +175,7 @@ private fun MessagesUi(animated: Boolean) {
     val activity = LocalActivity.current
 
     val canRead = remember(tick) { Repo.granted(Manifest.permission.READ_SMS) }
+    val pending by Repo.pendingCompose.collectAsStateWithLifecycle()
     var denied by rememberSaveable { mutableStateOf(false) }
     val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         Repo.start()
@@ -147,6 +194,16 @@ private fun MessagesUi(animated: Boolean) {
         holder.removeState(key)
     }
     BackHandler(enabled = stack.isNotEmpty() && sheet == null && prompt == null && dialog == null) { pop() }
+
+    // De otra app o de una notificación: se abre encima de la lista, lista para escribir.
+    LaunchedEffect(pending, canRead) {
+        val c = pending ?: return@LaunchedEffect
+        if (!canRead) return@LaunchedEffect
+        stack.clear()
+        if (c.threadId != null || c.addresses.isNotEmpty()) push(Overlay.Thread(c.threadId, c.addresses, c.body, c.image))
+        else push(Overlay.New(c.body, c.image))
+        Repo.requestCompose(null)
+    }
 
     // Sin el teclado: cada pantalla que escribe lo suma con imePadding, una sola vez.
     val insets = WindowInsets.safeDrawing.exclude(WindowInsets.ime).asPaddingValues()
@@ -186,7 +243,7 @@ private fun MessagesUi(animated: Boolean) {
                     enter = fadeIn() + if (reduced) fadeIn() else scaleIn(initialScale = 0.8f),
                     exit = fadeOut() + if (reduced) fadeOut() else scaleOut(targetScale = 0.8f),
                 ) {
-                    GlassIconButton(Icons.Rounded.Edit, str(R.string.new_message), { push(Overlay.New) }, size = 60.dp, prominent = true)
+                    GlassIconButton(Icons.Rounded.Edit, str(R.string.new_message), { push(Overlay.New()) }, size = 60.dp, prominent = true)
                 }
                 ToastHost(toast) { toast = null }
                 ActionSheetHost(sheet) { sheet = null }
@@ -231,13 +288,14 @@ private fun MessagesUi(animated: Boolean) {
                                 onArchived = {},
                                 onBack = ::pop,
                             )
-                            is Overlay.Thread -> ThreadScreen(current.threadId, current.addresses, current.text, padding, ::pop)
-                            Overlay.New -> NewMessageScreen(padding, ::pop) { address ->
+                            is Overlay.Thread -> ThreadScreen(current.threadId, current.addresses, current.text, current.image, padding, ::pop)
+                            is Overlay.New -> NewMessageScreen(padding, ::pop) { addresses ->
                                 // La pantalla de elegir se reemplaza por la conversación: volver lleva a la lista.
                                 pop()
-                                push(Overlay.Thread(null, listOf(address)))
+                                push(Overlay.Thread(null, addresses, current.text, current.image))
                             }
-                            Overlay.Settings -> SettingsScreen(padding, ::pop)
+                            Overlay.Settings -> SettingsScreen(padding, ::pop, onBlocked = { push(Overlay.Blocked) })
+                            Overlay.Blocked -> BlockedScreen(padding, ::pop)
                         }
                     }
                 }

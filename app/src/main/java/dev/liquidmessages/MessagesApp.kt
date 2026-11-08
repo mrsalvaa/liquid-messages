@@ -4,6 +4,7 @@ package dev.liquidmessages
 import android.app.Application
 import dev.liquidmessages.data.Repo
 import dev.liquidmessages.data.Stores
+import dev.liquidmessages.notify.Notifier
 import dev.liquidmessages.util.Strings
 
 class MessagesApp : Application() {
@@ -12,5 +13,6 @@ class MessagesApp : Application() {
         Strings.app = this
         Stores.init(this)
         Repo.init(this)
+        Notifier.channels(this)
     }
 }

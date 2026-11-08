@@ -55,6 +55,22 @@ object Actions {
     fun handToSystemApp(context: Context, address: String, body: String): Boolean =
         start(context, Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", address, null)).putExtra("sms_body", body))
 
+    /**
+     * Abre un adjunto de un MMS con otra app: se copia a la caché y se comparte solo con la app
+     * que lo abre, solo para leer. Las copias de más de una hora se borran.
+     */
+    suspend fun openPart(context: Context, partId: Long, contentType: String, name: String?) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val dir = java.io.File(context.cacheDir, "view").apply { mkdirs() }
+        dir.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 3_600_000 }?.forEach { it.delete() }
+        val safe = (name ?: "adjunto").replace(Regex("[^A-Za-z0-9._-]"), "_").take(60)
+        val file = java.io.File(dir, "$partId-$safe")
+        context.contentResolver.openInputStream(Uri.parse("content://mms/part/$partId"))?.use { input -> file.outputStream().use { input.copyTo(it) } } ?: return@withContext false
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.mms", file)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            start(context, Intent(Intent.ACTION_VIEW).setDataAndType(uri, contentType).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        }
+    }
+
     /** Copia sin que el sistema muestre el texto en la vista previa si es un código (Android 13+). */
     fun copy(context: Context, text: String, sensitive: Boolean = false) {
         val clip = ClipData.newPlainText(str(R.string.app_name), text)

@@ -21,6 +21,9 @@ import dev.liquidmessages.core.sms.Message
 import dev.liquidmessages.core.text.SpanishOrder
 import dev.liquidmessages.sim.SimSnapshot
 import dev.liquidmessages.sim.SystemSims
+import dev.liquidmessages.sms.Blocked
+import dev.liquidmessages.sms.DefaultSms
+import dev.liquidmessages.sms.SmsStore
 import dev.liquidmessages.sms.SystemSms
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +81,15 @@ object Repo {
 
     private val _fakeContacts = MutableStateFlow<List<ContactSummary>?>(null)
 
+    private val _isDefault = MutableStateFlow(false)
+    /** Si es la app de SMS predeterminada: sin eso no puede enviar, recibir, marcar ni borrar. */
+    val isDefault: StateFlow<Boolean> = _isDefault.asStateFlow()
+
+    lateinit var store: SmsStore
+        private set
+    lateinit var blocked: Blocked
+        private set
+
     private val _countryConflict = MutableStateFlow<List<String>>(emptyList())
     /** Los chips son de países distintos y todavía no se eligió: la interfaz pregunta. */
     val countryConflict: StateFlow<List<String>> = _countryConflict.asStateFlow()
@@ -90,7 +102,21 @@ object Repo {
     /** Un mensaje para dejar escrito (de otra app o de una notificación): nunca se envía solo. */
     val pendingCompose: StateFlow<Compose?> = _pendingCompose.asStateFlow()
 
-    data class Compose(val address: String, val body: String = "")
+    /**
+     * Algo para dejar listo (de otra app, de una notificación o de compartir): una conversación
+     * por hilo o por direcciones, con texto y una foto opcionales. Nunca se envía solo.
+     */
+    data class Compose(
+        val addresses: List<String> = emptyList(),
+        val body: String = "",
+        val threadId: Long? = null,
+        val image: android.net.Uri? = null,
+    )
+
+    /** Hace algo con la base de mensajes fuera del hilo principal (marcar, borrar, enviar). */
+    fun io(block: suspend () -> Unit) {
+        scope.launch(Dispatchers.IO) { block() }
+    }
 
     private var contactsJob: Job? = null
     private var smsJob: Job? = null
@@ -100,6 +126,9 @@ object Repo {
         contacts = SystemContacts(app)
         sms = SystemSms(app)
         sims = SystemSims(app)
+        store = SmsStore(app)
+        blocked = Blocked(app)
+        _isDefault.value = DefaultSms.isDefault(app)
         scope.launch {
             Stores.settings.state.map { it.defaultCountry to it.defaultAreaCode }.distinctUntilChanged().collect { (country, area) ->
                 _numbers.value = PhoneNumbers(country.ifEmpty { "AR" }, area.ifEmpty { null })
@@ -113,6 +142,7 @@ object Repo {
     /** Se llama al abrir la app, al volver a ella y después de cada permiso. Solo desde el hilo principal. */
     fun start() {
         _permissionTick.value++
+        _isDefault.value = DefaultSms.isDefault(app)
         sims.start()
         chooseCountry(sims.state.value)
         if (contactsJob == null && granted(Manifest.permission.READ_CONTACTS)) {
@@ -131,7 +161,8 @@ object Repo {
     }
 
     private fun loadSms() {
-        _real.value = Inbox(sms.messages(), sms.participants(), loaded = true)
+        val participants = sms.participants()
+        _real.value = Inbox(sms.messages(participants), participants, loaded = true)
     }
 
     /** Herramienta de prueba (solo debug): reemplaza lo que se ve por datos en memoria, o vuelve a lo real. */
@@ -154,7 +185,7 @@ object Repo {
 
     /** Decide por qué chip sale un mensaje, con lo que se sabe en este momento. */
     fun decide(target: SendTarget, conversationSubscription: Int?, canSend: Boolean, hasText: Boolean = true): SendDecision {
-        val snapshot: SimSnapshot = sims.state.value
+        val snapshot: SimSnapshot = sims.current()
         val s = Stores.settings.value
         val context = SendContext(
             chips = snapshot.chips,

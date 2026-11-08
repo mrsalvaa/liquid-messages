@@ -82,10 +82,28 @@ fun who(addresses: List<String>, book: Book, numbers: PhoneNumbers): Who {
     }
 }
 
-/** Lo que se ve de un mensaje en una sola línea: el texto, "Vos: …" si es tuyo, o el aviso de MMS. */
+/**
+ * Lo que se ve de un mensaje en una sola línea: el texto, o qué adjunto tiene ("Foto"), o que es un
+ * MMS sin bajar; con "Vos: …" si es tuyo.
+ */
 fun snippet(m: Message): String {
-    val text = if (m.mms) str(R.string.mms_placeholder) else m.body.replace('\n', ' ').trim()
-    return if (m.box.outgoing && !m.mms) str(R.string.you_prefix, text) else text
+    val text = when {
+        m.pending -> str(R.string.mms_pending)
+        m.body.isNotBlank() -> m.body.replace('\n', ' ').trim()
+        m.subject != null -> m.subject!!
+        m.attachments.isNotEmpty() -> str(
+            when (m.attachments.first().kind) {
+                dev.liquidmessages.core.sms.Attachment.Kind.IMAGE -> R.string.attachment_photo
+                dev.liquidmessages.core.sms.Attachment.Kind.VIDEO -> R.string.attachment_video
+                dev.liquidmessages.core.sms.Attachment.Kind.AUDIO -> R.string.attachment_audio
+                dev.liquidmessages.core.sms.Attachment.Kind.CONTACT -> R.string.attachment_contact
+                dev.liquidmessages.core.sms.Attachment.Kind.FILE -> R.string.attachment_file
+            },
+        )
+        m.mms -> str(R.string.mms_placeholder)
+        else -> ""
+    }
+    return if (m.box.outgoing) str(R.string.you_prefix, text) else text
 }
 
 /**

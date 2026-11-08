@@ -140,6 +140,27 @@ class SystemSims(context: Context) {
 
     private fun unwatchAll() = callbacks.keys.toList().forEach(::unwatch)
 
+    /**
+     * Los chips ahora, sin registrar nada: para responder desde una notificación con la app
+     * cerrada. El estado de servicio queda "desconocido", que no bloquea ni elige nada.
+     */
+    fun current(): SimSnapshot {
+        if (_state.value.known) return _state.value
+        val airplane = airplaneMode()
+        if (!hasPermission()) return SimSnapshot(airplane = airplane)
+        return try {
+            val infos = subs?.activeSubscriptionInfoList.orEmpty().filter { !it.isOpportunistic }
+            SimSnapshot(
+                chips = infos.map { SimChip(it.simSlotIndex, it.subscriptionId, it.displayName?.toString().orEmpty(), it.iconTint) }.sortedBy { it.slotIndex },
+                known = true,
+                airplane = airplane,
+                countries = infos.mapNotNull { it.countryIso },
+            )
+        } catch (e: SecurityException) {
+            SimSnapshot(airplane = airplane)
+        }
+    }
+
     /** Suscripción predeterminada de SMS del sistema; null si no hay. No pide permisos. */
     fun systemDefault(): Int? = SubscriptionManager.getDefaultSmsSubscriptionId().takeIf { it != SubscriptionManager.INVALID_SUBSCRIPTION_ID }
 }

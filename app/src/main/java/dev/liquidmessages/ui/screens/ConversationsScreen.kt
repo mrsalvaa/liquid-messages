@@ -2,6 +2,20 @@
 package dev.liquidmessages.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import dev.liquidmessages.ui.glass.LocalDialog
+import dev.liquidmessages.ui.glass.GlassCard
+import dev.liquidmessages.ui.glass.GlassButton
+import dev.liquidmessages.ui.glass.DialogSpec
+import dev.liquidmessages.ui.components.DangerButton
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -82,8 +96,23 @@ fun ConversationsScreen(
     val settings by Stores.settings.state.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     val sheet = LocalActionSheet.current
+    val dialog = LocalDialog.current
+    val toast = LocalToast.current
     val context = LocalContext.current
     val p = LocalGlass.current
+    val isDefault by Repo.isDefault.collectAsStateWithLifecycle()
+    val tick by Repo.permissionTick.collectAsStateWithLifecycle()
+    val notificationsOn = androidx.compose.runtime.remember(tick) { dev.liquidmessages.notify.Notifier.allowed(context) }
+    val role = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { Repo.start() }
+    val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { Repo.start() }
+    // Recién hecha predeterminada: se piden las notificaciones una vez, para avisar cuando llega algo.
+    var askedNotifications by rememberSaveable { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(isDefault, notificationsOn) {
+        if (isDefault && !notificationsOn && !askedNotifications && !archived && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            askedNotifications = true
+            notify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val rows by produceState<List<ListRow>?>(null, inbox, book, numbers, settings.pinned, settings.archived, settings.muted, query, archived) {
         value = withContext(Dispatchers.Default) {
@@ -128,6 +157,9 @@ fun ConversationsScreen(
             add(SheetAction(str(if (c.prefs.archived) R.string.unarchive else R.string.archive), if (c.prefs.archived) Icons.Rounded.Unarchive else Icons.Rounded.Archive) {
                 toggle({ it.archived }, c.key) { copy(archived = it) }
             })
+            add(SheetAction(str(if (c.prefs.muted) R.string.unmute else R.string.mute), if (c.prefs.muted) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff) {
+                toggle({ it.muted }, c.key) { copy(muted = it) }
+            })
             if (single != null && SenderKind.of(single) != SenderKind.ALPHANUMERIC) {
                 add(SheetAction(str(R.string.call), Icons.Rounded.Call) { Actions.dial(context, single) })
                 val id = r.who.contactId
@@ -138,7 +170,41 @@ fun ConversationsScreen(
                 }
             }
         }
-        sheet(SheetSpec(r.who.title, actions))
+        val more = buildList {
+            if (isDefault && single != null && SenderKind.of(single) != SenderKind.ALPHANUMERIC) {
+                add(SheetAction(str(R.string.block), Icons.Rounded.Block) {
+                    dialog(
+                        DialogSpec(str(R.string.block_title, r.who.title)) { dismiss ->
+                            Text(str(R.string.block_text), color = LocalGlass.current.contentSecondary, fontSize = 15.sp)
+                            Spacer(Modifier.height(16.dp))
+                            DangerButton(str(R.string.block), {
+                                dismiss()
+                                Repo.io { if (Repo.blocked.block(single)) kotlinx.coroutines.withContext(Dispatchers.Main) { toast(str(R.string.blocked_toast)) } }
+                            }, Modifier.fillMaxWidth())
+                            Spacer(Modifier.height(8.dp))
+                            GlassButton(str(R.string.cancel), dismiss, Modifier.fillMaxWidth())
+                        },
+                    )
+                })
+            }
+            if (isDefault) {
+                add(SheetAction(str(R.string.delete), Icons.Rounded.DeleteOutline) {
+                    dialog(
+                        DialogSpec(str(R.string.delete_conversation_title)) { dismiss ->
+                            Text(str(R.string.delete_conversation_text) + " " + str(R.string.delete_cant_undo), color = LocalGlass.current.contentSecondary, fontSize = 15.sp)
+                            Spacer(Modifier.height(16.dp))
+                            DangerButton(str(R.string.delete), {
+                                dismiss()
+                                Repo.io { Repo.store.deleteThreads(listOf(c.threadId)) }
+                            }, Modifier.fillMaxWidth())
+                            Spacer(Modifier.height(8.dp))
+                            GlassButton(str(R.string.cancel), dismiss, Modifier.fillMaxWidth())
+                        },
+                    )
+                })
+            }
+        }
+        sheet(SheetSpec(r.who.title, actions + more))
     }
 
     val state = rememberLazyListState()
@@ -166,6 +232,30 @@ fun ConversationsScreen(
         }
         item(key = "search") {
             SearchField(query, { query = it }, str(R.string.search_hint), str(R.string.clear), Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+        }
+        if (!isDefault && !archived) {
+            item(key = "default") {
+                GlassCard(Modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
+                    Text(str(R.string.default_title), fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    Text(str(R.string.default_text), Modifier.padding(top = 4.dp, bottom = 12.dp), fontSize = 14.sp, color = p.contentSecondary)
+                    GlassButton(str(R.string.default_action), {
+                        dev.liquidmessages.sms.DefaultSms.request(context)?.let(role::launch)
+                    }, Modifier.fillMaxWidth(), prominent = true)
+                }
+            }
+        } else if (isDefault && !notificationsOn && !archived) {
+            item(key = "notifications") {
+                GlassCard(Modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
+                    Text(str(R.string.notifications_off), fontSize = 14.sp, color = p.content)
+                    GlassButton(str(R.string.notifications_allow), {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }, Modifier.fillMaxWidth().padding(top = 10.dp))
+                }
+            }
         }
         if (inbox.fake) {
             item(key = "fake") {

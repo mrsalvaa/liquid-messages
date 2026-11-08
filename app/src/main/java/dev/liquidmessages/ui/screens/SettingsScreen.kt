@@ -25,12 +25,14 @@ import dev.liquidmessages.ui.components.SwitchRow
 import dev.liquidmessages.ui.glass.GlassCard
 import dev.liquidmessages.ui.glass.LocalGlass
 import dev.liquidmessages.ui.glass.SectionLabel
+import dev.liquidmessages.ui.glass.SettingRow
 import dev.liquidmessages.util.str
 
 @Composable
-fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit) {
+fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit, onBlocked: () -> Unit) {
     val s by Stores.settings.state.collectAsStateWithLifecycle()
     val sims by Repo.sims.state.collectAsStateWithLifecycle()
+    val isDefault by Repo.isDefault.collectAsStateWithLifecycle()
     val p = LocalGlass.current
     val edit: ((AppSettings) -> AppSettings) -> Unit = { Stores.settings.update(it) }
 
@@ -77,6 +79,12 @@ fun SettingsScreen(padding: PaddingValues, onBack: () -> Unit) {
         SectionLabel(str(R.string.writing))
         GlassCard {
             SwitchRow(str(R.string.simplify_accents), s.simplifyAccents, { v -> edit { it.copy(simplifyAccents = v) } }, subtitle = str(R.string.simplify_accents_hint))
+        }
+
+        // La lista de bloqueados del sistema solo la puede ver la app de SMS o de teléfono predeterminada.
+        if (isDefault) {
+            SectionLabel(str(R.string.block))
+            GlassCard { SettingRow(str(R.string.blocked_numbers), onClick = onBlocked) }
         }
 
         SectionLabel(str(R.string.about))

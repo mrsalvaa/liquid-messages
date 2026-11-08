@@ -76,3 +76,75 @@ Los datos de prueba viven **en memoria**: nunca se escriben en el proveedor de S
 | Tema oscuro, Liquid y Sólido | Se leen bien |
 
 Al terminar se borraron los SMS simulados, se desinstaló la build y se apagó el emulador. **Sin probar:** dos chips (el emulador tiene uno) y la fluidez en el celu.
+
+## Etapas 2 y 3: app de SMS predeterminada y MMS
+
+Se hicieron juntas a pedido del dueño: siendo la predeterminada, los MMS los tiene que bajar y guardar la propia app (el servicio de MMS del sistema no lo hace por ella), así que sin MMS se perderían.
+
+### Lo que exige el rol y cómo está protegido
+
+| Componente | Protección |
+|---|---|
+| `receive/SmsDeliverReceiver` (`SMS_DELIVER`) | `BROADCAST_SMS`: solo el sistema |
+| `receive/MmsWapPushReceiver` (`WAP_PUSH_DELIVER`) | `BROADCAST_WAP_PUSH`: solo el sistema |
+| `receive/RespondViaMessageService` | `SEND_RESPOND_VIA_MESSAGE`: solo el sistema |
+| `MainActivity` con `SENDTO`/`VIEW` de `sms:`, `smsto:`, `mms:`, `mmsto:` y `SEND` de texto o foto | Deja el mensaje escrito; nunca envía solo |
+| `SmsStatusReceiver`, `MmsResultReceiver`, `NotificationActionReceiver` | No exportados: solo los `PendingIntent` de la app |
+| `FileProvider` `${applicationId}.mms` | No exportado; permiso solo a `com.android.phone` y `com.android.mms.service`, sobre `cache/mms/` (se borra al terminar) y `cache/view/` (adjuntos abiertos con otra app, se borran a la hora) |
+
+Permisos finales (`aapt2 dump permissions`): `READ_SMS`, `READ_CONTACTS`, `READ_PHONE_STATE`, `SEND_SMS`, `RECEIVE_SMS`, `RECEIVE_MMS`, `RECEIVE_WAP_PUSH`, `POST_NOTIFICATIONS`. Ninguno más.
+
+### SMS
+
+- **Recibir:** se juntan las partes de un mismo remitente, se guarda en `Inbox` sin leer con el chip por el que llegó, y se avisa. Los números bloqueados los descarta el sistema antes.
+- **Enviar:** `SmsSender` guarda en `Outbox`, parte con `divideMessage` y envía por el chip ya decidido; cada parte avisa por `PendingIntent`. Una que falle deja el mensaje "No se envió", con aviso y "Reenviar" en su menú.
+- **Leer:** abrir la conversación la marca leída (SMS y MMS) y quita su notificación.
+- **Borrar** mensajes y conversaciones, con confirmación (la papelera es de la etapa 4).
+- **Bloquear:** la lista del sistema (`BlockedNumberContract`), la misma de Phone; en Ajustes, "Números bloqueados" para desbloquear.
+
+### Notificaciones
+
+`MessagingStyle` con nombre y foto del contacto (búsqueda directa en la agenda: desde segundo plano la de la app puede no estar cargada). Acciones: Responder, Marcar como leído y "Copiar 482913" si hay un código. **En la pantalla bloqueada solo dice "Mensaje nuevo"**, sin quién ni qué. Silenciar una conversación (menú) no la notifica.
+
+Responder desde la notificación, y "responder con un mensaje" al rechazar una llamada, siguen la regla de chips: si hay que elegir chip, **no envían** y avisan, con el texto esperando en la conversación.
+
+En Android 12 `POST_NOTIFICATIONS` no existe: se da por permitido (lint lo marcó; antes la app no avisaba nada en Android 12).
+
+### MMS
+
+`mms/pdu/` es la copia de mmslib de AOSP Messaging (Apache-2.0, ver `mms/pdu/NOTICE`), con el paquete cambiado porque el sistema trae otra copia oculta con el nombre original. No se copió `PduPersister`: `mms/MmsStore.kt` guarda en las tablas `pdu`, `addr` y `part` solo lo que la app usa.
+
+- **Recibir:** el aviso (`NotificationInd`) **se guarda primero** y después se pide bajarlo (`downloadMultimediaMessage` a un archivo del `FileProvider`). Si la descarga falla, el aviso queda con "Descargar" y una notificación: nunca se pierde. Un aviso repetido (mismo lugar de descarga) no se duplica. Al bajar, el aviso se reemplaza por el MMS completo y se le contesta al operador con `m-notifyresp.ind`.
+- **Enviar:** `SendReq` con presentación SMIL (como la app de AOSP), las fotos reducidas a JPEG hasta el tamaño que acepta el operador (`MMS_CONFIG_MAX_MESSAGE_SIZE`, 300 KB si no lo dice). Va como MMS si hay foto o la conversación es de grupo.
+- **Mostrar:** texto, asunto, fotos dentro de la burbuja (tocarla la abre en grande) y otros adjuntos como botón. En un grupo, cada mensaje recibido dice quién lo mandó.
+- **Grupos y número propio:** en un MMS de grupo los destinatarios incluyen la línea propia, y la app no pide `READ_PHONE_NUMBERS`. Se excluyen los números que en MMS individuales recibidos aparecen como único destinatario; se calcula al recibir y **no se guarda**. Si todavía no hay ninguno, un grupo puede mostrar el número propio como un participante más.
+- **Lo que el proveedor oculta:** a quien no es la app predeterminada (también al shell de adb) el proveedor de MMS no le muestra salientes ni avisos sin bajar (`accessRestricted`). Para limpiar el emulador hay que borrar desde la app.
+
+### Qué se probó (emulador `liquid35`, números `+1 202 555 01XX`)
+
+| Prueba | Resultado |
+|---|---|
+| "Hacer predeterminada" con el diálogo del sistema | El sistema la acepta como app de SMS; el rol da también las notificaciones |
+| SMS entrante simulado | Se guarda sin leer, notificación con Responder, Marcar como leído y "Copiar 482913" |
+| Responder desde la notificación | Sale el SMS (queda enviado), el recibido queda leído y la notificación se va |
+| Enviar desde la conversación | Enviado |
+| Bloquear y recibir de ese número | No llega; de otro número sí; desbloquear desde Ajustes |
+| `smsto:` de otra app | Abre la conversación con el texto escrito, sin enviar |
+| Compartir una foto | Pide a quién; en la conversación, miniatura y "Se va a enviar como MMS" |
+| `DEV_MMS` (solo emulador): `SendReq` ida y vuelta | Mismo texto con ñ y emoji, misma foto |
+| `DEV_MMS`: aviso sin servidor | Queda con "Descargar" y notificación de que no se pudo bajar |
+| `DEV_MMS`: MMS individual y de grupo guardados | Foto y texto en la burbuja; grupo con 2 participantes, sin el número propio |
+| Enviar MMS (grupo y con foto) | Sin servidor de MMS: queda "No se envió", con aviso |
+| Borrar mensaje y conversación | Se borran del proveedor |
+
+Al terminar se borró todo desde la app, se devolvió el rol de SMS a la app del emulador, se desinstaló la build y se apagó el emulador.
+
+**Sin probar, y por qué:**
+
+| Qué | Por qué | Cómo probarlo |
+|---|---|---|
+| Bajar y enviar MMS de verdad | El emulador no tiene servidor de MMS | Un MMS real, en el celu |
+| Dos chips | El emulador tiene uno | En el celu, enviando por cada chip |
+| Responder con un mensaje al rechazar una llamada | Necesita una llamada | Rechazar una llamada real con mensaje |
+| Fluidez | El emulador usa GPU por software | Build `profile` en el celu |
+| Grupos con el número propio sin MMS individuales previos | Depende de los mensajes que haya | Recibir un MMS de grupo |

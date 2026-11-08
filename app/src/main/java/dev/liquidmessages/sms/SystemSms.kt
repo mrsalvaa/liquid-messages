@@ -9,24 +9,26 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Telephony
+import dev.liquidmessages.core.sms.Attachment
 import dev.liquidmessages.core.sms.Box
 import dev.liquidmessages.core.sms.Message
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import dev.liquidmessages.mms.pdu.PduHeaders
 
 /**
- * Lectura de los mensajes del sistema (proveedor Telephony). Necesita READ_SMS. Hasta la etapa de
- * MMS, de un MMS solo se lee cuándo llegó, a qué conversación es y si se leyó: nunca su contenido.
- * Todas las funciones hacen E/S: llamarlas fuera del hilo principal. Nada de esto se registra en
+ * Lectura de los mensajes del sistema (proveedor Telephony). Necesita READ_SMS. De un MMS se lee
+ * el texto y la lista de adjuntos; el contenido de un adjunto (una foto) se carga recién al
+ * mostrarlo, desde content://mms/part/ID. Todas las funciones hacen E/S: llamarlas fuera del hilo principal. Nada de esto se registra en
  * logcat.
  */
 class SystemSms(context: Context) {
     private val resolver: ContentResolver = context.contentResolver
 
-    /** Todos los SMS y, como marcadores, los MMS. Los id de MMS van en negativo para no chocar. */
-    fun messages(): List<Message> = sms() + mmsMarkers()
+    /** Todos los SMS y MMS. Los id de MMS van en negativo para no chocar con los de SMS. */
+    fun messages(participants: Map<Long, List<String>>): List<Message> = sms() + mms(participants)
 
     private fun sms(): List<Message> =
         resolver.query(
@@ -57,16 +59,37 @@ class SystemSms(context: Context) {
             }
         }.orEmpty()
 
-    private fun mmsMarkers(): List<Message> =
-        resolver.query(
+    /**
+     * Los MMS con su texto, adjuntos y asunto. Las partes se leen todas juntas (una consulta); el
+     * remitente de cada MMS recibido se busca solo en las conversaciones de grupo, donde hace
+     * falta saber quién lo mandó.
+     */
+    private fun mms(participants: Map<Long, List<String>>): List<Message> {
+        class Parts(val text: StringBuilder = StringBuilder(), val files: MutableList<Attachment> = ArrayList())
+        val parts = HashMap<Long, Parts>()
+        resolver.query(PARTS, arrayOf(Telephony.Mms.Part._ID, Telephony.Mms.Part.MSG_ID, Telephony.Mms.Part.CONTENT_TYPE, Telephony.Mms.Part.TEXT, Telephony.Mms.Part.NAME, Telephony.Mms.Part.FILENAME, Telephony.Mms.Part.CONTENT_LOCATION), null, null, Telephony.Mms.Part.SEQ)?.use { c ->
+            while (c.moveToNext()) {
+                val mid = c.getLong(1)
+                val type = c.getString(2).orEmpty().lowercase()
+                val p = parts.getOrPut(mid) { Parts() }
+                when {
+                    type == "application/smil" -> Unit
+                    type == "text/plain" -> c.getString(3)?.takeIf { it.isNotBlank() }?.let { if (p.text.isNotEmpty()) p.text.append('\n'); p.text.append(it) }
+                    else -> p.files += Attachment(c.getLong(0), type, c.getString(4) ?: c.getString(5) ?: c.getString(6))
+                }
+            }
+        }
+        return resolver.query(
             Telephony.Mms.CONTENT_URI,
-            arrayOf(Telephony.Mms._ID, Telephony.Mms.THREAD_ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX, Telephony.Mms.READ, Telephony.Mms.SUBSCRIPTION_ID),
+            arrayOf(Telephony.Mms._ID, Telephony.Mms.THREAD_ID, Telephony.Mms.DATE, Telephony.Mms.MESSAGE_BOX, Telephony.Mms.READ, Telephony.Mms.SUBSCRIPTION_ID, Telephony.Mms.MESSAGE_TYPE, Telephony.Mms.SUBJECT),
             null,
             null,
             null,
         )?.use { c ->
             buildList(c.count) {
                 while (c.moveToNext()) {
+                    val id = c.getLong(0)
+                    val thread = c.getLong(1)
                     val box = when (c.getInt(3)) {
                         Telephony.Mms.MESSAGE_BOX_SENT -> Box.SENT
                         Telephony.Mms.MESSAGE_BOX_OUTBOX -> Box.OUTBOX
@@ -74,23 +97,40 @@ class SystemSms(context: Context) {
                         Telephony.Mms.MESSAGE_BOX_FAILED -> Box.FAILED
                         else -> Box.INBOX
                     }
+                    val people = participants[thread].orEmpty()
+                    val from = when {
+                        box != Box.INBOX -> ""
+                        people.size == 1 -> people[0]
+                        else -> sender(id).orEmpty()
+                    }
+                    val p = parts[id]
                     add(
                         Message(
-                            id = -c.getLong(0),
-                            threadId = c.getLong(1),
-                            address = "",
-                            body = "",
+                            id = -id,
+                            threadId = thread,
+                            address = from,
+                            body = p?.text?.toString().orEmpty(),
                             // En MMS la fecha está en segundos.
                             date = c.getLong(2) * 1000,
                             box = box,
                             read = c.getInt(4) != 0,
                             subscriptionId = c.intOrNull(5)?.takeIf { it >= 0 },
                             mms = true,
+                            attachments = p?.files.orEmpty(),
+                            subject = c.getString(7)?.takeIf { it.isNotBlank() },
+                            pending = c.getInt(6) == PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND,
                         ),
                     )
                 }
             }
         }.orEmpty()
+    }
+
+    /** Quién mandó un MMS recibido (la dirección "From"). */
+    private fun sender(mmsId: Long): String? =
+        resolver.query(Uri.parse("content://mms/$mmsId/addr"), arrayOf(Telephony.Mms.Addr.ADDRESS), "${Telephony.Mms.Addr.TYPE} = ${PduHeaders.FROM}", null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0)?.takeIf { it.isNotBlank() && it != INSERT_ADDRESS_TOKEN } else null
+        }
 
     /**
      * Participantes de cada conversación, como los guarda el sistema: cada hilo tiene ids de
@@ -127,6 +167,10 @@ class SystemSms(context: Context) {
     private companion object {
         val THREADS: Uri = Uri.parse("content://mms-sms/conversations?simple=true")
         val CANONICAL: Uri = Uri.parse("content://mms-sms/canonical-addresses")
+        val PARTS: Uri = Uri.parse("content://mms/part")
+
+        /** Lo que guarda el sistema como "From" de un MMS propio: "mi número", sin decirlo. */
+        const val INSERT_ADDRESS_TOKEN = "insert-address-token"
 
         fun Cursor.intOrNull(i: Int): Int? = if (isNull(i)) null else getInt(i)
     }

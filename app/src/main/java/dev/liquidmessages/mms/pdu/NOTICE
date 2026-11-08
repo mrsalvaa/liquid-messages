@@ -1,0 +1,17 @@
+Los archivos .java de esta carpeta, InvalidHeaderValueException.java y MmsException.java
+vienen de la app Messaging de AOSP (platform/packages/apps/Messaging, carpeta
+src/com/android/messaging/mmslib, commit de315b7 del 26/02/2025):
+
+    Copyright (C) 2007-2008 Esmertec AG.
+    Copyright (C) 2007-2008 The Android Open Source Project
+    Licensed under the Apache License, Version 2.0
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Cambios: el paquete pasó de com.android.messaging.mmslib a dev.liquidmessages.mms (el
+sistema trae otra copia oculta con el nombre original, y una clase de la app con el mismo
+nombre que una del sistema no se carga) y ContentType se reemplazó por mms/ContentType.java.
+Si se cambia algo más, se anota acá. No se copiaron PduPersister, Downloads, SqliteWrapper
+ni util/ (caché y DRM): la app guarda los MMS en el proveedor con su propio código.
+
+Otro cambio: EncodedStringValue ya no escribe en logcat el valor que no pudo clonar (puede
+ser un número o un texto del mensaje).

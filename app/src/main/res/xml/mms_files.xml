@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+    Solo dos carpetas de la caché: los MMS que se bajan o se envían (se borran al terminar) y la
+    copia de un adjunto que se abre con otra app (se borra a la hora).
+-->
+<paths>
+    <cache-path name="mms" path="mms/" />
+    <cache-path name="view" path="view/" />
+</paths>

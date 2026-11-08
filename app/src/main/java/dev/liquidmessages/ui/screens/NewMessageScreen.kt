@@ -11,6 +11,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.GroupAdd
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +32,9 @@ import dev.liquidmessages.R
 import dev.liquidmessages.core.text.ContactSearch
 import dev.liquidmessages.data.Repo
 import dev.liquidmessages.ui.components.ContactRow
+import dev.liquidmessages.ui.glass.GlassButton
+import dev.liquidmessages.ui.glass.GlassChip
+import dev.liquidmessages.ui.glass.GlassIconButton
 import dev.liquidmessages.ui.glass.GlassTextField
 import dev.liquidmessages.ui.glass.LocalGlass
 import dev.liquidmessages.ui.glass.SectionLabel
@@ -39,14 +46,27 @@ private class Pick(val name: String, val number: String, val photoUri: String?, 
 
 /**
  * Elegir a quién escribir: los contactos con número que coinciden con lo escrito (uno por número),
- * o el número tal cual si se escribió uno. Elegir abre la conversación (la que ya exista con ese
- * número, o una nueva).
+ * o el número tal cual si se escribió uno. Tocar uno abre la conversación (la que ya exista, o una
+ * nueva); el "+" lo suma a un grupo, que se abre con "Escribir" (los grupos van por MMS).
  */
 @Composable
-fun NewMessageScreen(padding: PaddingValues, onBack: () -> Unit, onPick: (String) -> Unit) {
+fun NewMessageScreen(padding: PaddingValues, onBack: () -> Unit, onPick: (List<String>) -> Unit) {
     val book by Repo.book.collectAsStateWithLifecycle()
     val numbers by Repo.numbers.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
+    var group by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val isDefault by Repo.isDefault.collectAsStateWithLifecycle()
+    fun choose(number: String) {
+        if (group.isEmpty()) onPick(listOf(number)) else if (group.none { numbers.key(it) == numbers.key(number) }) group = group + number
+        query = ""
+    }
+    // Un grupo es MMS: solo la app predeterminada puede enviarlo.
+    val addButton: (@Composable (String) -> Unit)? = if (!isDefault) null else { number ->
+        GlassIconButton(Icons.Rounded.GroupAdd, str(R.string.add_recipient), {
+            if (group.none { numbers.key(it) == numbers.key(number) }) group = group + number
+            query = ""
+        }, size = 40.dp)
+    }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val p = LocalGlass.current
@@ -72,16 +92,29 @@ fun NewMessageScreen(padding: PaddingValues, onBack: () -> Unit, onPick: (String
                 str(R.string.to_hint),
                 Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(onGo = { typed?.let(onPick) }),
+                keyboardActions = KeyboardActions(onGo = { typed?.let(::choose) }),
                 focusRequester = focus,
             )
         }
+        if (group.isNotEmpty()) {
+            item(key = "group") {
+                FlowRow(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    group.forEach { n ->
+                        val name = Repo.contactFor(n)?.displayName ?: numbers.format(n)
+                        GlassChip("$name  ✕", true, { group = group - n })
+                    }
+                }
+                GlassButton(str(R.string.write_group, group.size), { onPick(group) }, Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp), icon = Icons.AutoMirrored.Rounded.Send, prominent = true)
+            }
+        }
         if (typed != null) {
             item(key = "typed") {
+                // El número como título: así el avatar no toma iniciales de "Escribir a".
                 ContactRow(
-                    str(R.string.write_to, numbers.format(typed)),
-                    onClick = { onPick(typed) },
-                    trailing = { Icon(styled(Icons.AutoMirrored.Rounded.Send), null, tint = p.accentFg) },
+                    numbers.format(typed),
+                    onClick = { choose(typed) },
+                    subtitle = str(R.string.new_message),
+                    trailing = { addButton?.invoke(typed) ?: Icon(styled(Icons.AutoMirrored.Rounded.Send), null, tint = p.accentFg) },
                 )
             }
         }
@@ -89,7 +122,7 @@ fun NewMessageScreen(padding: PaddingValues, onBack: () -> Unit, onPick: (String
             item(key = "contacts") { SectionLabel(str(R.string.contacts_section), Modifier.padding(start = 12.dp, top = 12.dp)) }
         }
         items(picks, key = { "${it.name}|${it.number}" }) { pick ->
-            ContactRow(pick.name, onClick = { onPick(pick.number) }, subtitle = numbers.format(pick.number), photoUri = pick.photoUri)
+            ContactRow(pick.name, onClick = { choose(pick.number) }, subtitle = numbers.format(pick.number), photoUri = pick.photoUri, trailing = addButton?.let { b -> { b(pick.number) } })
         }
     }
 }

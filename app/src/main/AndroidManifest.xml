@@ -16,7 +16,18 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
     <!--
-        Enviar y recibir llegan en la etapa 2, con el rol de app de SMS predeterminada.
+        Enviar, recibir y guardar SMS y MMS: solo los usa siendo la app de SMS predeterminada (el
+        sistema no le entrega mensajes a otra). Enviar sale siempre por un pedido tuyo, nunca solo.
+    -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" />
+
+    <!-- Avisar cuando llega un mensaje. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
 
         Nunca: internet (los MMS los baja y los manda el sistema), ubicación ni el número de la
         línea. Se quitan también si alguna librería los pide.
@@ -64,7 +75,77 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- "Mensaje" desde Phone, Contacts u otra app: abre la conversación con el texto escrito, sin enviar. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SENDTO" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+            <!-- Compartir un texto o una foto desde otra app: elegís a quién y se envía cuando lo tocás. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity>
+
+        <!-- SMS que llega. Solo el sistema puede mandarlo (BROADCAST_SMS). -->
+        <receiver
+            android:name=".receive.SmsDeliverReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_DELIVER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Aviso de MMS. Solo el sistema puede mandarlo (BROADCAST_WAP_PUSH). -->
+        <receiver
+            android:name=".receive.MmsWapPushReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_WAP_PUSH">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
+                <data android:mimeType="application/vnd.wap.mms-message" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Responder con un mensaje al rechazar una llamada. Solo el sistema (SEND_RESPOND_VIA_MESSAGE). -->
+        <service
+            android:name=".receive.RespondViaMessageService"
+            android:exported="true"
+            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+        </service>
+
+        <!-- Resultados de enviar y bajar, y acciones de las notificaciones: solo los llama la propia app. -->
+        <receiver android:name=".sms.SmsStatusReceiver" android:exported="false" />
+        <receiver android:name=".mms.MmsResultReceiver" android:exported="false" />
+        <receiver android:name=".notify.NotificationActionReceiver" android:exported="false" />
+
+        <!-- Archivos de los MMS en tránsito, compartidos solo con el servicio de MMS del sistema. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.mms"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/mms_files" />
+        </provider>
 
         <provider
             android:name="androidx.startup.InitializationProvider"
