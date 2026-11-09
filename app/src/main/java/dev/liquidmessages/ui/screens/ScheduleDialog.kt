@@ -45,17 +45,20 @@ fun ScheduleContent(onPick: (Long) -> Unit, onCancel: () -> Unit) {
         add(str(R.string.schedule_in_hour) to now.plusHours(1).withSecond(0).withNano(0))
         val tonight = now.toLocalDate().atTime(20, 0)
         if (tonight.isAfter(now.plusMinutes(10))) add(str(R.string.schedule_tonight) to tonight)
-        add(str(R.string.schedule_tomorrow_morning) to now.toLocalDate().plusDays(1).atTime(9, 0))
     }
     quick.forEach { (label, t) ->
         GlassButton("$label · ${scheduledLabel(ms(t))}", { onPick(ms(t)) }, Modifier.fillMaxWidth().padding(bottom = 8.dp))
     }
+    // Este dice solo "Mañana 9 am": la hora ya va en el nombre.
+    val tomorrow9 = now.toLocalDate().plusDays(1).atTime(9, 0)
+    GlassButton(str(R.string.schedule_tomorrow_morning), { onPick(ms(tomorrow9)) }, Modifier.fillMaxWidth().padding(bottom = 8.dp))
     Text(str(R.string.schedule_other), Modifier.padding(top = 8.dp, bottom = 4.dp), fontSize = 15.sp, color = p.contentSecondary)
     var day by remember { mutableIntStateOf(if (now.hour >= 22) 1 else 0) }
     var hour by remember { mutableIntStateOf((now.hour + 1) % 24) }
     var minute by remember { mutableIntStateOf(0) }
     val days = (0..6).map { LocalDate.now(zone).plusDays(it.toLong()) }
-    ChipRow((0..6).toList(), day, { i ->
+    // El día en un desplegable: se abre en otra ventana, encima de esta.
+    dev.liquidmessages.ui.components.Dropdown(str(R.string.schedule_day), (0..6).toList(), day, { i ->
         when (i) {
             0 -> str(R.string.today)
             1 -> str(R.string.tomorrow)

@@ -748,6 +748,8 @@ private fun Composer(
         }
     }
     val dialog = LocalDialog.current
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     var slot by rememberSaveable { mutableStateOf<Int?>(null) }
     var pick by remember { mutableStateOf<Picked?>(null) }
     val target = slot?.let { SendTarget.Slot(it) } ?: SendTarget.UsePolicy
@@ -834,6 +836,9 @@ private fun Composer(
             // Programar: solo texto (sin foto) y siendo la predeterminada.
             if (isDefault && text.isNotBlank() && pick == null) {
                 GlassIconButton(Icons.Rounded.Schedule, str(R.string.schedule), {
+                    // Sin el teclado: si no, tapa la ventana y al cerrarse la corre de lugar.
+                    keyboard?.hide()
+                    focusManager.clearFocus()
                     dialog(DialogSpec(str(R.string.schedule)) { dismiss ->
                         ScheduleContent({ at ->
                             dismiss()

@@ -81,6 +81,12 @@ fun TrashScreen(padding: PaddingValues, onBack: () -> Unit) {
     ) {
         item(key = "title") { BackTitle(str(R.string.trash), onBack, Modifier.padding(horizontal = 4.dp)) }
         val list = entries
+        // Vaciar arriba, a la vista apenas se entra.
+        if (!list.isNullOrEmpty()) {
+            item(key = "empty_all") {
+                DangerButton(str(R.string.trash_empty_title), { confirmPurge(null) }, Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp))
+            }
+        }
         if (list != null && list.isEmpty()) item(key = "empty") { EmptyState(str(R.string.trash_none), str(R.string.trash_hint)) }
         items(list.orEmpty(), key = { it.id }) { e ->
             val title = who(e.participants.ifEmpty { e.messages.map { it.address }.distinct() }, book, numbers).title
@@ -109,11 +115,6 @@ fun TrashScreen(padding: PaddingValues, onBack: () -> Unit) {
                 },
                 subtitle = plural(R.plurals.message_count, e.messages.size) + " · " + plural(R.plurals.days_left, left),
             )
-        }
-        if (!list.isNullOrEmpty()) {
-            item(key = "empty_all") {
-                DangerButton(str(R.string.trash_empty_title), { confirmPurge(null) }, Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 16.dp))
-            }
         }
     }
 }

@@ -189,6 +189,7 @@ private fun MessagesUi(animated: Boolean) {
     var sheet by remember { mutableStateOf<SheetSpec?>(null) }
     var prompt by remember { mutableStateOf<PromptSpec?>(null) }
     var dialog by remember { mutableStateOf<DialogSpec?>(null) }
+    var subDialog by remember { mutableStateOf<DialogSpec?>(null) }
     var toast by remember { mutableStateOf<dev.liquidmessages.ui.screens.ToastMsg?>(null) }
     var selection by remember { mutableStateOf<dev.liquidmessages.ui.screens.SelectionBottom?>(null) }
     val reduced = LocalReducedMotion.current
@@ -240,7 +241,8 @@ private fun MessagesUi(animated: Boolean) {
     CompositionLocalProvider(
         LocalActionSheet provides { sheet = it },
         LocalPrompt provides { prompt = it },
-        LocalDialog provides { dialog = it },
+        // Una ventana abierta desde otra (un desplegable dentro de un diálogo) va encima, sin cerrarla.
+        LocalDialog provides { if (dialog != null) subDialog = it else dialog = it },
         LocalToast provides { toast = dev.liquidmessages.ui.screens.ToastMsg(it) },
         dev.liquidmessages.ui.screens.LocalUndoToast provides { text, undo -> toast = dev.liquidmessages.ui.screens.ToastMsg(text, undo) },
         dev.liquidmessages.ui.screens.LocalSelectionBottom provides { selection = it },
@@ -287,7 +289,8 @@ private fun MessagesUi(animated: Boolean) {
                 ToastHost(toast) { toast = null }
                 ActionSheetHost(sheet) { sheet = null }
                 PromptHost(prompt) { prompt = null }
-                DialogHost(dialog) { dialog = null }
+                DialogHost(dialog) { dialog = null; subDialog = null }
+                DialogHost(subDialog) { subDialog = null }
             },
         ) {
             if (!canRead) {

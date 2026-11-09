@@ -176,7 +176,7 @@ Al terminar se borró todo desde la app, se sacó el PIN de prueba, se devolvió
 
 ## Pulido: personalización, funciones y avisos
 
-- **Íconos:** Liquid (cristal sobre grafito, burbuja con los puntos calados y el punto rojo de la suite), Material (violeta `#8A55D6`, estilo Fossify), Samsung (burbuja azul sobre blanco), iPhone (verde) y monocromo. Un `activity-alias` por ícono, como en el resto de la suite.
+- **Íconos:** Liquid (cristal sobre grafito, burbuja con los puntos calados y el punto rojo de la suite), Material (amarillo `#E0A800`, el único color libre de la suite, estilo Fossify), Samsung (burbuja azul sobre blanco), iPhone (verde) y monocromo. Un `activity-alias` por ícono, como en el resto de la suite.
 - **Conversaciones:** burbujas recibidas grises o con el color del contacto (el de su avatar), letra chica/normal/grande, hora siempre o al tocar, lista compacta, mensajes de solo emojis grandes y sin burbuja, y deslizar a cada lado (nada, archivar, borrar a la papelera, leída o fijar; en material3 1.4 la acción llega por `onDismiss`).
 - **Selección múltiple** con la barra de Recorder, y "Marcar todo como leído".
 - **Borradores** en `files/drafts.json` (no en el proveedor: ninguna otra app los ve).

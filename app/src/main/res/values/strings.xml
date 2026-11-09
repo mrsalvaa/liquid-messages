@@ -206,7 +206,7 @@
     <string name="schedule">Schedule</string>
     <string name="schedule_in_hour">In an hour</string>
     <string name="schedule_tonight">Tonight</string>
-    <string name="schedule_tomorrow_morning">Tomorrow morning</string>
+    <string name="schedule_tomorrow_morning">Tomorrow 9 am</string>
     <string name="schedule_other">Or choose day and time</string>
     <string name="schedule_for">Schedule for %1$s</string>
     <string name="schedule_past">That time already passed</string>
@@ -281,4 +281,5 @@
     <string name="no_private">No private conversations</string>
     <string name="no_private_hint">Long-press a conversation and choose Make private.</string>
     <string name="no_spam">No possible spam</string>
+    <string name="schedule_day">Day</string>
 </resources>
