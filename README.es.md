@@ -74,6 +74,18 @@ Las novedades de cada versión están en el [registro de cambios](CHANGELOG.es.m
 Bajá el APK de [Releases](../../releases) e instalalo (Android 12 o posterior). Después abrilo y
 hacelo la app de SMS predeterminada.
 
+### Si el celular no te deja instalarla
+
+Mensajes pide permisos de SMS, y Android bloquea esas apps cuando no vienen de una tienda. El APK
+está bien (comprobalo abajo); para instalarlo:
+
+- **Play Protect**: Play Store → tu foto → Play Protect → ⚙️ → apagá "Analizar apps con Play
+  Protect" mientras instalás y después volvé a prenderlo.
+- **Bloqueador automático de Samsung**: Ajustes → Seguridad y privacidad → Bloqueador automático →
+  apagalo mientras instalás.
+- **O instalala desde una computadora** con la depuración USB activada:
+  `adb install liquid-messages-v1.0.1.apk`.
+
 Comprobá que el archivo no se alteró:
 
 ```bash

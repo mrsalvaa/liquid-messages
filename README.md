@@ -71,6 +71,17 @@ See the [changelog](CHANGELOG.md) for what's new in each version.
 Get the APK from [Releases](../../releases) and install it (Android 12 or later). Then open it and
 make it the default SMS app.
 
+### If the phone refuses to install it
+
+Messages asks for SMS permissions, and Android blocks apps like that when they come from outside a
+store. The APK is fine (check it below); to install it:
+
+- **Play Protect**: Play Store → your picture → Play Protect → ⚙️ → turn off "Scan apps with Play
+  Protect" while installing, then turn it back on.
+- **Samsung Auto Blocker**: Settings → Security and privacy → Auto Blocker → turn it off while
+  installing.
+- **Or install it from a computer** with USB debugging on: `adb install liquid-messages-v1.0.1.apk`.
+
 Check the file wasn't altered:
 
 ```bash
