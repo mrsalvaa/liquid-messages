@@ -51,15 +51,19 @@ object NotificationAvatar {
         paint.color = if (dark) Color.WHITE else 0xFFFAFBFD.toInt()
         paint.setShadowLayer(s * 0.02f, 0f, s * 0.008f, 0x26000000)
         canvas.drawCircle(c, s * 0.385f, s * 0.175f, paint)
-        val left = s * 0.19f
-        val right = s * 0.81f
-        val waist = s * 0.82f
+        // El cuerpo: cúpula de los hombros arriba y, abajo, un arco con el mismo centro que el
+        // círculo, así acompaña al borde en vez de ser un óvalo propio.
+        val half = s * 0.31f
+        val inner = s * 0.43f
+        val drop = kotlin.math.sqrt(inner * inner - half * half)
+        val waist = c + drop
+        val left = c - half
+        val right = c + half
+        val angle = Math.toDegrees(kotlin.math.atan2(drop.toDouble(), half.toDouble())).toFloat()
         val body = Path().apply {
             moveTo(left, waist)
-            // Cúpula de los hombros.
             arcTo(RectF(left, s * 0.635f, right, waist + (waist - s * 0.635f)), 180f, 180f, false)
-            // Curva de abajo, más plana.
-            arcTo(RectF(left, waist - s * 0.09f, right, waist + s * 0.09f), 0f, 180f, false)
+            arcTo(RectF(c - inner, c - inner, c + inner, c + inner), angle, 180f - 2 * angle, false)
             close()
         }
         canvas.drawPath(body, paint)
