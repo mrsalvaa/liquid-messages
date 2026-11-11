@@ -19,6 +19,19 @@ class DevReceiver : BroadcastReceiver() {
         val result = when (intent.action) {
             "dev.liquidmessages.DEV_FAKE" -> DevTools.generate(intent.getIntExtra("count", 500).coerceIn(1, 2000))
             "dev.liquidmessages.DEV_CLEAR" -> DevTools.clear()
+            // Un aviso de ejemplo con un nombre inventado (sin mensajes reales).
+            // El avatar de los avisos como PNG en files/avatar.png (para mirarlo sin abrir el panel).
+            "dev.liquidmessages.DEV_AVATAR" -> {
+                java.io.File(context.filesDir, "avatar.png").outputStream().use {
+                    dev.liquidmessages.notify.NotificationAvatar.bitmap(context, "Ana Prueba").compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                }
+                "ok"
+            }
+            "dev.liquidmessages.DEV_NOTIFY" -> {
+                dev.liquidmessages.notify.Notifier.channels(context)
+                dev.liquidmessages.notify.Notifier.demo(context, intent.getStringExtra("name") ?: "Ana Prueba", "Mensaje de prueba")
+                "ok"
+            }
             // Solo en un emulador (ver DevMms): escribe MMS de prueba en el proveedor.
             "dev.liquidmessages.DEV_MMS" -> DevMms.run(context)
             "dev.liquidmessages.DEV_STYLE" -> DevTools.style(

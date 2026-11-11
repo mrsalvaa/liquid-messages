@@ -88,11 +88,33 @@ object Notifier {
 
     private fun person(context: Context, address: String, numbers: PhoneNumbers): Person {
         val found = contact(context, address)
-        return Person.Builder()
-            .setName(found?.first ?: if (SenderKind.of(address) == SenderKind.ALPHANUMERIC) address else numbers.format(address))
-            .apply { found?.second?.let { setIcon(Icon.createWithContentUri(it)) } }
-            .setKey(address)
+        return person(context, found?.first ?: if (SenderKind.of(address) == SenderKind.ALPHANUMERIC) address else numbers.format(address), address, found?.second)
+    }
+
+    /**
+     * Quien escribe, siempre con imagen: su foto o un avatar propio. Sin imagen, cada sistema dibuja
+     * su silueta (en Samsung queda corrida hacia arriba del círculo).
+     */
+    internal fun person(context: Context, name: String, key: String, photo: Uri?): Person =
+        Person.Builder()
+            .setName(name)
+            .setIcon(photo?.let { Icon.createWithContentUri(it) } ?: NotificationAvatar.icon(context, name))
+            .setKey(key)
             .build()
+
+    /** Solo para la herramienta de prueba de la build debug: un aviso con un nombre inventado. */
+    internal fun demo(context: Context, name: String, text: String) {
+        val me = Person.Builder().setName(context.getString(R.string.you)).setKey("me").build()
+        val style = Notification.MessagingStyle(me)
+            .addMessage(Notification.MessagingStyle.Message(text, System.currentTimeMillis(), person(context, name, "demo", null)))
+        context.getSystemService(NotificationManager::class.java)?.notify(
+            999_001,
+            Notification.Builder(context, CHANNEL_MESSAGES)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setStyle(style)
+                .setCategory(Notification.CATEGORY_MESSAGE)
+                .build(),
+        )
     }
 
     private class Unread(val address: String, val text: String, val date: Long)

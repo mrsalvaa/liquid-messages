@@ -16,6 +16,8 @@
             <intent-filter>
                 <action android:name="dev.liquidmessages.DEV_FAKE" />
                 <action android:name="dev.liquidmessages.DEV_CLEAR" />
+                <action android:name="dev.liquidmessages.DEV_NOTIFY" />
+                <action android:name="dev.liquidmessages.DEV_AVATAR" />
                 <action android:name="dev.liquidmessages.DEV_MMS" />
                 <action android:name="dev.liquidmessages.DEV_STYLE" />
             </intent-filter>

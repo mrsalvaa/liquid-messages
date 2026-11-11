@@ -1,5 +1,10 @@
 # Registro de cambios
 
+## Sin publicar
+
+### Arreglado
+- Notificaciones: quien no tiene foto ahora aparece con un círculo de cristal y la persona en blanco, centrada como en Contactos (algunos celulares dibujaban su propio ícono demasiado arriba).
+
 ## 1.0.1
 
 Primera versión.
