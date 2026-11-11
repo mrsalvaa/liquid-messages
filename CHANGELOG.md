@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.2
 
 ### Fixed
 - Notifications: a sender without a photo now shows a glass circle with a white person, centered like in Contacts (some phones drew their own icon too high).
