@@ -84,18 +84,18 @@ está bien (comprobalo abajo); para instalarlo:
 - **Bloqueador automático de Samsung**: Ajustes → Seguridad y privacidad → Bloqueador automático →
   apagalo mientras instalás.
 - **O instalala desde una computadora** con la depuración USB activada:
-  `adb install liquid-messages-v1.0.1.apk`.
+  `adb install liquid-messages-v1.0.2.apk`.
 
 Comprobá que el archivo no se alteró:
 
 ```bash
-sha256sum -c liquid-messages-v1.0.1.apk.sha256
+sha256sum -c liquid-messages-v1.0.2.apk.sha256
 ```
 
-SHA-256 de `liquid-messages-v1.0.1.apk`:
+SHA-256 de `liquid-messages-v1.0.2.apk`:
 
 ```
-a7674e91b3ce3f489952a8db6400a575f1fabf350685c55a1c40d62f4895b7d3
+8f2b99995529a59cc4fac53ff0e171e0b3cea9309afa0abe9b1b3104c982a61b
 ```
 
 Y que está firmado con la clave del proyecto (huella SHA-256 del certificado):
@@ -105,7 +105,7 @@ Y que está firmado con la clave del proyecto (huella SHA-256 del certificado):
 ```
 
 ```bash
-apksigner verify --print-certs liquid-messages-v1.0.1.apk
+apksigner verify --print-certs liquid-messages-v1.0.2.apk
 ```
 
 ## Compilar
