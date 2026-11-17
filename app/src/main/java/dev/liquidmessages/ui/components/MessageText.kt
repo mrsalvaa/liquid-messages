@@ -15,14 +15,31 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 import dev.liquidmessages.core.text.Links
+import dev.liquidmessages.core.text.NumberNames
 
 /**
  * El texto de un mensaje con sus enlaces, emails y teléfonos subrayados. Tocarlos no abre nada
  * directamente: llama a [onLink], que decide (un enlace web pide confirmación con su dominio).
  */
 @Composable
-fun MessageText(text: String, color: Color, onLink: (Links.Link) -> Unit, modifier: Modifier = Modifier, fontSize: androidx.compose.ui.unit.TextUnit = 16.sp) {
-    val links = remember(text) { Links.find(text) }
+fun MessageText(
+    text: String,
+    color: Color,
+    onLink: (Links.Link) -> Unit,
+    modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
+    /** Nombre del contacto de un número, para mostrarlo en su lugar (tocarlo sigue llamando al número). */
+    nameOf: ((String) -> String?)? = null,
+    /** Cambia cuando cambia la agenda, para volver a buscar los nombres. */
+    namesKey: Any? = null,
+) {
+    val named = remember(text, namesKey, nameOf != null) { nameOf?.let { NumberNames.replace(text, it) } }
+    @Suppress("NAME_SHADOWING")
+    val text = named?.text ?: text
+    val links = remember(text, named) {
+        val names = named?.names.orEmpty().map { Links.Link(it.range, it.number, Links.Kind.PHONE) }
+        (Links.find(text).filter { l -> names.none { it.range.first <= l.range.last && l.range.first <= it.range.last } } + names).sortedBy { it.range.first }
+    }
     val latest by rememberUpdatedState(onLink)
     val styled = remember(text, color, links) {
         buildAnnotatedString {

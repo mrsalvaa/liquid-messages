@@ -478,6 +478,7 @@ fun ThreadScreen(
                         ),
                         sender = if (group && !l.m.box.outgoing) senders[l.m.address] else null,
                         chipLabel = if (sims.multiple) sims.bySubscription(l.m.subscriptionId)?.let { str(R.string.sim_label, it.slotNumber) } else null,
+                        book = book,
                         onLongClick = { bubbleMenu(l.m, l.code) },
                         onLink = { link -> Actions.link(context, link, dialog) },
                         onDownload = {
@@ -578,6 +579,7 @@ private fun Bubble(
     style: BubbleStyle,
     sender: String?,
     chipLabel: String?,
+    book: Any,
     onLongClick: () -> Unit,
     onLink: (dev.liquidmessages.core.text.Links.Link) -> Unit,
     onDownload: () -> Unit,
@@ -632,7 +634,10 @@ private fun Bubble(
                         // Solo emojis (hasta tres): grandes y sin burbuja, como en otras apps de mensajes.
                         Text(m.body.trim(), Modifier.padding(horizontal = 4.dp), fontSize = style.fontSize * 2.6f)
                     } else if (m.body.isNotBlank()) {
-                        Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) { MessageText(m.body, fg, onLink, fontSize = style.fontSize) }
+                        Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) { 
+                            // Recibido: el número de un contacto se lee con su nombre; tocarlo sigue llamando al número.
+                            MessageText(m.body, fg, onLink, fontSize = style.fontSize, nameOf = if (mine) null else { n -> Repo.contactFor(n)?.displayName }, namesKey = book)
+                        }
                     } else if (m.attachments.isEmpty() && m.subject == null) {
                         Text(str(R.string.mms_placeholder), Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = fg.copy(alpha = 0.75f), fontSize = 15.sp)
                     }

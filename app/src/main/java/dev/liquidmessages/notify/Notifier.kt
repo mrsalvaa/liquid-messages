@@ -21,6 +21,7 @@ import dev.liquidmessages.core.phone.PhoneNumbers
 import dev.liquidmessages.core.sms.Conversations
 import dev.liquidmessages.core.sms.SenderKind
 import dev.liquidmessages.core.text.Codes
+import dev.liquidmessages.core.text.NumberNames
 import dev.liquidmessages.data.Stores
 import dev.liquidmessages.mms.MmsText
 
@@ -169,6 +170,7 @@ object Notifier {
                 threadId.toInt(),
                 Notification.Builder(context, channel)
                     .setSmallIcon(R.drawable.ic_notification)
+                    .setLargeIcon(dev.liquidmessages.util.AppIcons.large(context))
                     .setContentTitle(context.getString(R.string.notif_new_public))
                     .setCategory(Notification.CATEGORY_MESSAGE)
                     .setContentIntent(openThread(context, threadId, participants.singleOrNull()))
@@ -185,7 +187,9 @@ object Notifier {
         for (m in messages) {
             val p = people.getOrPut(m.address) { person(context, m.address, numbers) }
             // Vista previa "solo quién": se ve quién escribió, no qué.
-            val text = if (settings.notifPreview == 1) context.getString(R.string.notif_new_public) else m.text
+            // El número de un contacto dentro del texto se lee con su nombre ("Llamada perdida de Lucas").
+            val text = if (settings.notifPreview == 1) context.getString(R.string.notif_new_public)
+            else NumberNames.replace(m.text) { n -> contact(context, n)?.first }.text
             style.addMessage(Notification.MessagingStyle.Message(text, m.date, p))
         }
         if (group) style.conversationTitle = participants.joinToString(", ") { a -> (people[a] ?: person(context, a, numbers)).name?.toString() ?: a }
@@ -277,6 +281,7 @@ object Notifier {
         if (!allowed(context)) return
         val n = Notification.Builder(context, CHANNEL_FAILED)
             .setSmallIcon(R.drawable.ic_notification)
+            .setLargeIcon(dev.liquidmessages.util.AppIcons.large(context))
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))

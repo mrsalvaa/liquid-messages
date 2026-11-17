@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+### Changed
+- A phone number inside a received message that belongs to a contact is shown with the contact's name, in the notification, the list and the conversation ("Missed call from Lucas Rodríguez"). Tapping the name still calls the number; the stored message is unchanged.
+- Notifications without a sender photo slot (hidden preview, failed message) show the app icon you picked in Settings as their picture (the small app icon the system adds is fixed and can't follow the choice).
+
 ## 1.0.2
 
 ### Fixed

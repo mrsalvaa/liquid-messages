@@ -25,6 +25,9 @@ import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.liquidmessages.data.Repo
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,10 +91,13 @@ fun who(addresses: List<String>, book: Book, numbers: PhoneNumbers): Who {
  * Lo que se ve de un mensaje en una sola línea: el texto, o qué adjunto tiene ("Foto"), o que es un
  * MMS sin bajar; con "Vos: …" si es tuyo.
  */
-fun snippet(m: Message): String {
+fun snippet(m: Message, nameOf: ((String) -> String?)? = null): String {
     val text = when {
         m.pending -> str(R.string.mms_pending)
-        m.body.isNotBlank() -> m.body.replace('\n', ' ').trim()
+        m.body.isNotBlank() -> m.body.replace('\n', ' ').trim().let { body ->
+            // Recibido: el número de un contacto se lee con su nombre ("Llamada perdida de Lucas").
+            if (nameOf != null && !m.box.outgoing) dev.liquidmessages.core.text.NumberNames.replace(body, nameOf).text else body
+        }
         m.subject != null -> m.subject!!
         m.attachments.isNotEmpty() -> str(
             when (m.attachments.first().kind) {
@@ -132,7 +138,8 @@ fun ConversationRow(
     val p = LocalGlass.current
     val unread = c.unread > 0
     val failed = shown.box == MessageBox.FAILED
-    val line = snippet(shown)
+    val book by Repo.book.collectAsStateWithLifecycle()
+    val line = remember(shown, book) { snippet(shown) { Repo.contactFor(it)?.displayName } }
     val time = Dates.short(shown.date)
     Row(
         modifier

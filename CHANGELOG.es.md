@@ -1,5 +1,11 @@
 # Registro de cambios
 
+## 1.1.0
+
+### Cambiado
+- Un número de teléfono dentro de un mensaje recibido que es de un contacto se muestra con su nombre, en la notificación, la lista y la conversación ("Llamada perdida de Lucas Rodríguez"). Tocar el nombre sigue llamando al número; el mensaje guardado no cambia.
+- Las notificaciones sin foto de quien escribe (vista previa oculta, mensaje no enviado) muestran como imagen el ícono de la app que elegiste en Ajustes (el ícono chico que agrega el sistema es fijo y no puede seguir la elección).
+
 ## 1.0.2
 
 ### Arreglado
