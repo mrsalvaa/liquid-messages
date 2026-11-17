@@ -80,18 +80,18 @@ store. The APK is fine (check it below); to install it:
   Protect" while installing, then turn it back on.
 - **Samsung Auto Blocker**: Settings → Security and privacy → Auto Blocker → turn it off while
   installing.
-- **Or install it from a computer** with USB debugging on: `adb install liquid-messages-v1.0.2.apk`.
+- **Or install it from a computer** with USB debugging on: `adb install liquid-messages-v1.1.0.apk`.
 
 Check the file wasn't altered:
 
 ```bash
-sha256sum -c liquid-messages-v1.0.2.apk.sha256
+sha256sum -c liquid-messages-v1.1.0.apk.sha256
 ```
 
-SHA-256 of `liquid-messages-v1.0.2.apk`:
+SHA-256 of `liquid-messages-v1.1.0.apk`:
 
 ```
-8f2b99995529a59cc4fac53ff0e171e0b3cea9309afa0abe9b1b3104c982a61b
+b619ba7762af5feaa2e1f0db97abde3fe89b9245407a0408bf5d3d116e402e77
 ```
 
 And that it's signed with the project key (certificate SHA-256 fingerprint):
@@ -101,7 +101,7 @@ And that it's signed with the project key (certificate SHA-256 fingerprint):
 ```
 
 ```bash
-apksigner verify --print-certs liquid-messages-v1.0.2.apk
+apksigner verify --print-certs liquid-messages-v1.1.0.apk
 ```
 
 ## Build
